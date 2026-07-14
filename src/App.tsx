@@ -7,6 +7,10 @@ import { PodcastsPage } from './modules/media/pages/PodcastsPage';
 import { PodcastDetailPage } from './modules/media/pages/PodcastDetailPage';
 import { NewsPage } from './modules/news/pages/NewsPage';
 import { NewsDetailPage } from './modules/news/pages/NewsDetailPage';
+import { SchedulePage } from './modules/schedule/pages/SchedulePage';
+import { EventsPage } from './modules/events/pages/EventsPage';
+import { EventDetailPage } from './modules/events/pages/EventDetailPage';
+import { GalleriesPage } from './modules/galleries/pages/GalleriesPage';
 
 const Placeholder = ({ title }: { title: string }) => (
   <div className="flex items-center justify-center min-h-[60vh]">
@@ -29,22 +33,21 @@ function App() {
         <Route path="/" element={<MainLayout />}>
           <Route index element={<HomePage />} />
           
-          {/* Media */}
           <Route path="emisora" element={<RadioPage />} />
           <Route path="television" element={<TVPage />} />
           <Route path="podcasts" element={<PodcastsPage />} />
           <Route path="podcasts/:id" element={<PodcastDetailPage />} />
           
-          {/* News */}
           <Route path="noticias" element={<NewsPage />} />
           <Route path="noticias/:id" element={<NewsDetailPage />} />
           
-          {/* Placeholders */}
+          <Route path="programacion" element={<SchedulePage />} />
+          <Route path="eventos" element={<EventsPage />} />
+          <Route path="eventos/:id" element={<EventDetailPage />} />
+          
+          <Route path="galerias" element={<GalleriesPage />} />
+          
           <Route path="estudio-virtual" element={<Placeholder title="Estudio Virtual" />} />
-          <Route path="eventos" element={<Placeholder title="Eventos" />} />
-          <Route path="eventos/:id" element={<Placeholder title="Detalle Evento" />} />
-          <Route path="galerias" element={<Placeholder title="Galerías" />} />
-          <Route path="programacion" element={<Placeholder title="Programación" />} />
           <Route path="publicidad" element={<Placeholder title="Publicidad" />} />
           <Route path="contacto" element={<Placeholder title="Contacto" />} />
           <Route path="chat" element={<Placeholder title="Chat en Vivo" />} />
