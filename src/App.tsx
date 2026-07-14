@@ -3,6 +3,10 @@ import { MainLayout } from './shared/layouts/MainLayout';
 import { HomePage } from './modules/home/pages/HomePage';
 import { RadioPage } from './modules/media/pages/RadioPage';
 import { TVPage } from './modules/media/pages/TVPage';
+import { PodcastsPage } from './modules/media/pages/PodcastsPage';
+import { PodcastDetailPage } from './modules/media/pages/PodcastDetailPage';
+import { NewsPage } from './modules/news/pages/NewsPage';
+import { NewsDetailPage } from './modules/news/pages/NewsDetailPage';
 
 const Placeholder = ({ title }: { title: string }) => (
   <div className="flex items-center justify-center min-h-[60vh]">
@@ -24,13 +28,19 @@ function App() {
       <Routes>
         <Route path="/" element={<MainLayout />}>
           <Route index element={<HomePage />} />
+          
+          {/* Media */}
           <Route path="emisora" element={<RadioPage />} />
           <Route path="television" element={<TVPage />} />
+          <Route path="podcasts" element={<PodcastsPage />} />
+          <Route path="podcasts/:id" element={<PodcastDetailPage />} />
+          
+          {/* News */}
+          <Route path="noticias" element={<NewsPage />} />
+          <Route path="noticias/:id" element={<NewsDetailPage />} />
+          
+          {/* Placeholders */}
           <Route path="estudio-virtual" element={<Placeholder title="Estudio Virtual" />} />
-          <Route path="podcasts" element={<Placeholder title="Podcasts" />} />
-          <Route path="podcasts/:id" element={<Placeholder title="Detalle Podcast" />} />
-          <Route path="noticias" element={<Placeholder title="Noticias" />} />
-          <Route path="noticias/:id" element={<Placeholder title="Detalle Noticia" />} />
           <Route path="eventos" element={<Placeholder title="Eventos" />} />
           <Route path="eventos/:id" element={<Placeholder title="Detalle Evento" />} />
           <Route path="galerias" element={<Placeholder title="Galerías" />} />
