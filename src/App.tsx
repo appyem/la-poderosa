@@ -1,7 +1,13 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { MainLayout } from './shared/layouts/MainLayout';
+import { HeroSection } from './modules/home/components/HeroSection';
+import { LiveProgramsSection } from './modules/home/components/LiveProgramsSection';
+import { PodcastsSection } from './modules/home/components/PodcastsSection';
+import { NewsSection } from './modules/home/components/NewsSection';
+import { EventsSection } from './modules/home/components/EventsSection';
+import { SponsorsSection } from './modules/home/components/SponsorsSection';
 
-// Placeholder temporal para todas las pantallas
+// Placeholder temporal para las demás rutas
 const Placeholder = ({ title }: { title: string }) => (
   <div className="flex items-center justify-center min-h-[60vh]">
     <div className="text-center space-y-4">
@@ -10,18 +16,32 @@ const Placeholder = ({ title }: { title: string }) => (
       </div>
       <h2 className="text-2xl font-bold">{title}</h2>
       <p className="text-text-secondary max-w-md">
-        Esta pantalla será desarrollada en las siguientes sub-fases de la Fase 3.
+        Esta pantalla será desarrollada en las siguientes sub-fases.
       </p>
     </div>
   </div>
 );
+
+// Página de inicio completa
+const HomePage = () => {
+  return (
+    <div className="space-y-12 py-6">
+      <HeroSection />
+      <LiveProgramsSection />
+      <PodcastsSection />
+      <NewsSection />
+      <EventsSection />
+      <SponsorsSection />
+    </div>
+  );
+};
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<MainLayout />}>
-          <Route index element={<Placeholder title="Inicio (Próximamente)" />} />
+          <Route index element={<HomePage />} />
           <Route path="emisora" element={<Placeholder title="Emisora en Vivo" />} />
           <Route path="television" element={<Placeholder title="Televisión Digital" />} />
           <Route path="estudio-virtual" element={<Placeholder title="Estudio Virtual" />} />
