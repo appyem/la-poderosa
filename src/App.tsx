@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { MainLayout } from './shared/layouts/MainLayout';
+import { AdminLayout } from './shared/layouts/AdminLayout';
 import { AIAssistant } from './shared/components/AIAssistant';
 import { HomePage } from './modules/home/pages/HomePage';
 import { RadioPage } from './modules/media/pages/RadioPage';
@@ -16,15 +17,16 @@ import { AdsPage } from './modules/ads/pages/AdsPage';
 import { ContactPage } from './modules/contact/pages/ContactPage';
 import { ChatPage } from './modules/community/pages/ChatPage';
 import { CommunityPage } from './modules/community/pages/CommunityPage';
+import { DashboardHome } from './modules/dashboard/pages/DashboardHome';
 
 const Placeholder = ({ title }: { title: string }) => (
   <div className="flex items-center justify-center min-h-[60vh]">
     <div className="text-center space-y-4">
       <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-brand/20">
-        <span className="text-4xl">📺</span>
+        <span className="text-4xl">⚙️</span>
       </div>
       <h2 className="text-2xl font-bold">{title}</h2>
-      <p className="text-text-secondary max-w-md">Esta pantalla será desarrollada en las siguientes sub-fases.</p>
+      <p className="text-text-secondary max-w-md">Módulo administrativo en desarrollo para la demostración.</p>
     </div>
   </div>
 );
@@ -33,6 +35,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Rutas Públicas */}
         <Route path="/" element={<MainLayout />}>
           <Route index element={<HomePage />} />
           <Route path="emisora" element={<RadioPage />} />
@@ -49,9 +52,20 @@ function App() {
           <Route path="contacto" element={<ContactPage />} />
           <Route path="chat" element={<ChatPage />} />
           <Route path="comunidad" element={<CommunityPage />} />
-          <Route path="login" element={<Placeholder title="Iniciar Sesión" />} />
-          <Route path="dashboard" element={<Placeholder title="Dashboard Admin" />} />
           <Route path="*" element={<Placeholder title="Página no encontrada" />} />
+        </Route>
+
+        {/* Rutas Administrativas */}
+        <Route path="/dashboard" element={<AdminLayout />}>
+          <Route index element={<DashboardHome />} />
+          <Route path="usuarios" element={<Placeholder title="Gestión de Usuarios y Roles" />} />
+          <Route path="programacion" element={<Placeholder title="Gestión de Programación" />} />
+          <Route path="contenido" element={<Placeholder title="Gestión de Noticias y Podcasts" />} />
+          <Route path="streaming" element={<Placeholder title="Control de Streaming" />} />
+          <Route path="publicidad" element={<Placeholder title="Gestión de Publicidad" />} />
+          <Route path="analiticas" element={<Placeholder title="Analíticas Detalladas" />} />
+          <Route path="ia" element={<Placeholder title="Herramientas de IA" />} />
+          <Route path="configuracion" element={<Placeholder title="Configuración Multi-Tenant" />} />
         </Route>
       </Routes>
       <AIAssistant />
