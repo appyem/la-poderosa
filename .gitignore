@@ -26,3 +26,5 @@ dist-ssr
 .env.local
 node_modules
 dist
+public/studio-bg.mp4
+public/welcome-jingle.mp3
