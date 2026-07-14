@@ -11,7 +11,7 @@ export const AdsPage = () => {
     <div className="space-y-8 py-6 max-w-6xl mx-auto">
       <div className="text-center space-y-4">
         <h1 className="text-3xl md:text-4xl font-bold">Publicidad y Patrocinios</h1>
-        <p className="text-text-secondary max-w-2xl mx-auto">Conecta tu marca con nuestra audiencia.</p>
+        <p className="text-text-secondary max-w-2xl mx-auto">Conecta tu marca con nuestra audiencia. Ofrecemos soluciones integrales de marketing en radio, televisión, digital y eventos.</p>
       </div>
       <div className="grid md:grid-cols-3 gap-6">
         {plans.map((plan) => (
@@ -31,6 +31,16 @@ export const AdsPage = () => {
             </button>
           </div>
         ))}
+      </div>
+      <div className="mt-12 p-8 rounded-2xl bg-dark-surface border border-dark-border flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="space-y-2">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            <Mail className="w-5 h-5 text-brand" />
+            ¿Necesitas un plan a medida?
+          </h3>
+          <p className="text-text-secondary">Nuestro equipo comercial está listo para diseñar la estrategia perfecta para tu marca.</p>
+        </div>
+        <button className="px-6 py-3 rounded-lg bg-white text-dark-bg font-bold hover:bg-gray-200 transition-colors">Contactar Ventas</button>
       </div>
     </div>
   );
