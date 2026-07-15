@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { SplashScreen } from './shared/components/SplashScreen';
 import { MainLayout } from './shared/layouts/MainLayout';
 import { AdminLayout } from './shared/layouts/AdminLayout';
 import { AIAssistant } from './shared/components/AIAssistant';
@@ -34,6 +35,7 @@ const Placeholder = ({ title }: { title: string }) => (
 function App() {
   return (
     <BrowserRouter>
+    <SplashScreen />
       <Routes>
         {/* Rutas Públicas */}
         <Route path="/" element={<MainLayout />}>

@@ -71,7 +71,7 @@ export const MainLayout = () => {
                 <img 
                   src="/logo.jpg" 
                   alt="LA PODEROSA" 
-                  className="h-12 w-12 rounded-full object-cover shadow-lg shadow-brand/20 border-2 border-brand/30" 
+                  className="h-16 w-16 rounded-full object-cover shadow-lg shadow-brand/20 border-2 border-brand/30" 
                 />
                 <div className="flex flex-col">
                   <h1 className="text-xl font-black tracking-tight leading-none">LA PODEROSA</h1>
