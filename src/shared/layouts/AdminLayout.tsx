@@ -8,6 +8,7 @@ import {
 export const AdminLayout = () => {
   const [tenantOpen, setTenantOpen] = useState(false);
   const location = useLocation();
+  
   const menuItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Resumen' },
     { to: '/dashboard/usuarios', icon: Users, label: 'Usuarios y Roles' },
