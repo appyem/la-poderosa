@@ -40,7 +40,7 @@ export const MainLayout = () => {
   return (
     <div className="min-h-screen bg-dark-bg text-text-primary flex flex-col relative">
       {/* VIDEO DE FONDO GLOBAL */}
-      <div className="fixed inset-0 z-0 hidden md:block">
+      <div className="fixed inset-0 z-0 block">
         <video 
           autoPlay 
           muted 
