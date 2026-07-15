@@ -10,9 +10,10 @@ export const MainLayout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
+  // OVERLAY AJUSTADO: Opacidades mucho más bajas para que el video sea visible
   const getOverlay = () => (['/', '/emisora', '/television'].includes(location.pathname) 
-    ? 'from-dark-bg/70 via-dark-bg/85 to-dark-bg/95' 
-    : 'from-dark-bg/90 via-dark-bg/95 to-dark-bg');
+    ? 'from-black/20 via-black/40 to-black/60' 
+    : 'from-black/60 via-black/80 to-black/90');
 
   const mainNav = [
     { to: '/', icon: Home, label: 'Inicio' },
@@ -38,7 +39,7 @@ export const MainLayout = () => {
 
   return (
     <div className="min-h-screen bg-dark-bg text-text-primary flex flex-col relative">
-      {/* VIDEO DE FONDO GLOBAL (URL directa de Pexels) */}
+      {/* VIDEO DE FONDO GLOBAL */}
       <div className="fixed inset-0 z-0 hidden md:block">
         <video 
           autoPlay 
@@ -48,20 +49,21 @@ export const MainLayout = () => {
           className="w-full h-full object-cover" 
           poster="https://images.pexels.com/photos/5765711/pexels-photo-5765711.jpeg"
         >
-          <source src="https://videos.pexels.com/video-files/5765711/5765711-hd_1920_1080_30fps.mp4" type="video/mp4" />
+          {/* Usamos video/mp4 para máxima compatibilidad, incluso si la extensión es .mov */}
+          <source src="/fondo_poderosa.mov" type="video/mp4" />
         </video>
       </div>
 
-      {/* OVERLAY OSCURO GLOBAL */}
+      {/* OVERLAY OSCURO GLOBAL (Ahora con opacidad baja para ver el video) */}
       <div className={`fixed inset-0 z-[1] bg-gradient-to-b ${getOverlay()}`} />
 
       {/* CONTENIDO PRINCIPAL */}
       <div className="relative z-10 flex flex-col min-h-screen">
-        <header className="sticky top-0 z-50 bg-dark-bg/60 backdrop-blur-xl border-b border-dark-border/50">
+        <header className="sticky top-0 z-50 bg-black/30 backdrop-blur-xl border-b border-white/10">
           <div className="px-4 py-3 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <button 
-                className="md:hidden p-2 rounded-lg hover:bg-dark-elevated" 
+                className="md:hidden p-2 rounded-lg hover:bg-white/10" 
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -74,22 +76,22 @@ export const MainLayout = () => {
                   className="h-16 w-16 rounded-full object-cover shadow-lg shadow-brand/20 border-2 border-brand/30" 
                 />
                 <div className="flex flex-col">
-                  <h1 className="text-xl font-black tracking-tight leading-none">LA PODEROSA</h1>
-                  <p className="text-[10px] text-text-muted uppercase tracking-widest">Medios Digitales</p>
+                  <h1 className="text-xl font-black tracking-tight leading-none text-white">LA PODEROSA</h1>
+                  <p className="text-[10px] text-white/70 uppercase tracking-widest">Medios Digitales</p>
                 </div>
               </NavLink>
             </div>
 
             <div className="flex items-center gap-2">
-              <button className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg bg-dark-surface/50 backdrop-blur-sm border border-dark-border/50 hover:bg-dark-elevated">
-                <Search className="w-4 h-4 text-text-muted" />
-                <span className="text-sm text-text-muted">Buscar...</span>
+              <button className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg bg-black/40 backdrop-blur-sm border border-white/10 hover:bg-white/10">
+                <Search className="w-4 h-4 text-white/70" />
+                <span className="text-sm text-white/70">Buscar...</span>
               </button>
-              <button className="p-2 rounded-lg hover:bg-dark-elevated relative">
-                <Bell className="w-5 h-5 text-text-secondary" />
+              <button className="p-2 rounded-lg hover:bg-white/10 relative">
+                <Bell className="w-5 h-5 text-white/80" />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand rounded-full" />
               </button>
-              <button className="p-2 rounded-lg hover:bg-dark-elevated">
+              <button className="p-2 rounded-lg hover:bg-white/10">
                 <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand to-brand-dark" />
               </button>
             </div>
@@ -97,7 +99,7 @@ export const MainLayout = () => {
         </header>
 
         <div className="flex flex-1">
-          <aside className="hidden md:flex flex-col w-60 border-r border-dark-border/50 bg-dark-bg/40 backdrop-blur-xl sticky top-[61px] h-[calc(100vh-61px)] overflow-y-auto">
+          <aside className="hidden md:flex flex-col w-60 border-r border-white/10 bg-black/40 backdrop-blur-xl sticky top-[61px] h-[calc(100vh-61px)] overflow-y-auto">
             <nav className="p-3 space-y-1 flex-1">
               {fullNav.map((item) => (
                 <NavLink 
@@ -107,8 +109,8 @@ export const MainLayout = () => {
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm font-medium ${
                       isActive 
-                        ? 'bg-brand/20 backdrop-blur-sm text-brand border-l-2 border-brand' 
-                        : 'text-text-secondary hover:bg-dark-elevated/50 hover:text-white'
+                        ? 'bg-brand/30 backdrop-blur-sm text-white border-l-2 border-brand' 
+                        : 'text-white/70 hover:bg-white/10 hover:text-white'
                     }`
                   }
                 >
@@ -117,8 +119,8 @@ export const MainLayout = () => {
                 </NavLink>
               ))}
             </nav>
-            <div className="p-3 border-t border-dark-border/50">
-              <NavLink to="/dashboard" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:bg-dark-elevated/50 hover:text-white">
+            <div className="p-3 border-t border-white/10">
+              <NavLink to="/dashboard" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white">
                 <LayoutDashboard className="w-5 h-5" /> Panel Admin
               </NavLink>
             </div>
@@ -135,7 +137,7 @@ export const MainLayout = () => {
                     onClick={() => setMobileMenuOpen(false)} 
                     className={({ isActive }) => 
                       `flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                        isActive ? 'bg-brand/10 text-brand' : 'text-text-secondary hover:bg-dark-elevated hover:text-white'
+                        isActive ? 'bg-brand/20 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'
                       }`
                     }
                   >
@@ -154,7 +156,7 @@ export const MainLayout = () => {
           </main>
         </div>
 
-        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-dark-surface/95 backdrop-blur-lg border-t border-dark-border md:hidden">
+        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-xl border-t border-white/10 md:hidden">
           <div className="flex justify-around items-center h-16">
             {mainNav.map((item) => (
               <NavLink 
@@ -163,7 +165,7 @@ export const MainLayout = () => {
                 end={item.to === '/'} 
                 className={({ isActive }) =>
                   `flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${
-                    isActive ? 'text-brand' : 'text-text-muted'
+                    isActive ? 'text-brand' : 'text-white/60'
                   }`
                 }
               >
