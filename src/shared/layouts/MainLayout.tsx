@@ -2,15 +2,43 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { 
   Home, Radio, Tv, Newspaper, Calendar, ImageIcon, 
   Mic2, MessageCircle, Users, Megaphone, Phone, LayoutDashboard, 
-  Menu, X, Search, Bell 
+  Menu, X, Search, Bell, Play, Pause, Volume2, VolumeX
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+
+// ✅ URL DE TU STREAM DE RADIO.CO
+const STREAM_URL = "https://streams.radio.co/sf25c76934/listen";
 
 export const MainLayout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
-  // OVERLAY AJUSTADO: Opacidades mucho más bajas para que el video sea visible
+  // Estados del reproductor global
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Controlar reproducción
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.play().catch(e => console.log("Error al reproducir:", e));
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, [isPlaying]);
+
+  // Controlar volumen
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : 0.75; // 75% de volumen por defecto
+    }
+  }, [isMuted]);
+
+  const togglePlay = () => setIsPlaying(!isPlaying);
+  const toggleMute = () => setIsMuted(!isMuted);
+
   const getOverlay = () => (['/', '/emisora', '/television'].includes(location.pathname) 
     ? 'from-black/20 via-black/40 to-black/60' 
     : 'from-black/60 via-black/80 to-black/90');
@@ -39,6 +67,14 @@ export const MainLayout = () => {
 
   return (
     <div className="min-h-screen bg-dark-bg text-text-primary flex flex-col relative">
+      {/* Elemento de Audio Global Oculto */}
+      <audio 
+        ref={audioRef} 
+        src={STREAM_URL} 
+        preload="none" 
+        crossOrigin="anonymous"
+      />
+
       {/* VIDEO DE FONDO GLOBAL */}
       <div className="fixed inset-0 z-0 block">
         <video 
@@ -49,12 +85,11 @@ export const MainLayout = () => {
           className="w-full h-full object-cover" 
           poster="https://images.pexels.com/photos/5765711/pexels-photo-5765711.jpeg"
         >
-          {/* Usamos video/mp4 para máxima compatibilidad, incluso si la extensión es .mov */}
           <source src="/fondo_poderosa.mov" type="video/mp4" />
         </video>
       </div>
 
-      {/* OVERLAY OSCURO GLOBAL (Ahora con opacidad baja para ver el video) */}
+      {/* OVERLAY OSCURO GLOBAL */}
       <div className={`fixed inset-0 z-[1] bg-gradient-to-b ${getOverlay()}`} />
 
       {/* CONTENIDO PRINCIPAL */}
@@ -149,15 +184,58 @@ export const MainLayout = () => {
             </div>
           )}
 
-          <main className="flex-1 overflow-y-auto animate-fade-in pb-24 md:pb-6">
+          <main className="flex-1 overflow-y-auto animate-fade-in pb-32 md:pb-6">
             <div className="max-w-7xl mx-auto">
               <Outlet key={location.pathname} />
             </div>
           </main>
         </div>
 
-        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-xl border-t border-white/10 md:hidden">
-          <div className="flex justify-around items-center h-16">
+        {/* 🎵 REPRODUCTOR GLOBAL PERSISTENTE (Mini Player) */}
+        <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-t border-white/10 px-4 py-3">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            {/* Info del programa */}
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-10 h-10 rounded-lg bg-brand/20 flex items-center justify-center flex-shrink-0">
+                <Radio className="w-5 h-5 text-brand" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white truncate">LA PODEROSA - En Vivo</p>
+                <p className="text-xs text-white/60 truncate">Streaming 24/7</p>
+              </div>
+            </div>
+
+            {/* Controles Centrales */}
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={togglePlay}
+                className="w-10 h-10 rounded-full bg-brand hover:bg-brand-light flex items-center justify-center transition-all hover:scale-105"
+              >
+                {isPlaying ? (
+                  <Pause className="w-5 h-5 fill-current text-white" />
+                ) : (
+                  <Play className="w-5 h-5 fill-current text-white ml-0.5" />
+                )}
+              </button>
+            </div>
+
+            {/* Control de Volumen (Solo Desktop) */}
+            <div className="hidden md:flex items-center gap-2 flex-1 justify-end">
+              <button onClick={toggleMute} className="p-1 hover:bg-white/10 rounded-full transition-colors">
+                {isMuted ? <VolumeX className="w-5 h-5 text-white/70" /> : <Volume2 className="w-5 h-5 text-white/70" />}
+              </button>
+              <div className="w-24 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full bg-brand transition-all ${isMuted ? 'w-0' : 'w-3/4'}`} 
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Navegación Móvil Inferior (Ajustada para no tapar el reproductor) */}
+        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-white/10 md:hidden h-16">
+          <div className="flex justify-around items-center h-full">
             {mainNav.map((item) => (
               <NavLink 
                 key={item.to} 

@@ -1,4 +1,4 @@
-import { useState } from 'react'; // <--- ESTA LÍNEA FALTABA
+import { useState, useRef, useEffect } from 'react';
 import { 
   Play, Pause, Volume2, VolumeX, Heart, Share2, 
   SkipForward, SkipBack, Users, Mic2, Clock,
@@ -7,17 +7,53 @@ import {
 import { AudioVisualizer } from '../components/AudioVisualizer';
 import { mockPrograms } from '../../../core/data/mockData';
 
+// ✅ URL CORRECTA DE ESCUCHA PÚBLICA DE RADIO.CO
+const STREAM_URL = "https://streams.radio.co/sf25c76934/listen"; 
+
 export const RadioPage = () => {
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(75);
   const [isMuted, setIsMuted] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  
+  // Referencia al elemento de audio real
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   const currentProgram = mockPrograms.find(p => p.isLive) || mockPrograms[0];
   const nextProgram = mockPrograms[1];
 
+  // Efecto para controlar la reproducción real
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.play().catch(e => console.log("Error al reproducir:", e));
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, [isPlaying]);
+
+  // Efecto para controlar el volumen real
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : volume / 100;
+    }
+  }, [volume, isMuted]);
+
+  const togglePlay = () => {
+    setIsPlaying(!isPlaying);
+  };
+
   return (
     <div className="space-y-6 py-6">
+      {/* Elemento de Audio Oculto (El que se conecta a Radio.co) */}
+      <audio 
+        ref={audioRef} 
+        src={STREAM_URL} 
+        preload="none" 
+        crossOrigin="anonymous"
+      />
+
       {/* Reproductor Principal */}
       <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-brand-dark via-dark-surface to-dark-bg border border-dark-border">
         {/* Imagen de fondo con overlay */}
@@ -88,7 +124,7 @@ export const RadioPage = () => {
             </button>
             
             <button 
-              onClick={() => setIsPlaying(!isPlaying)}
+              onClick={togglePlay}
               className="p-5 rounded-full bg-brand hover:bg-brand-light shadow-lg shadow-brand/30 transition-all hover:scale-105"
             >
               {isPlaying ? (
@@ -194,7 +230,7 @@ export const RadioPage = () => {
       <div className="space-y-4">
         <h2 className="text-xl font-bold">Programación de Hoy</h2>
         <div className="space-y-2">
-          {mockPrograms.map((program,) => (
+          {mockPrograms.map((program) => (
             <div
               key={program.id}
               className={`flex items-center gap-4 p-4 rounded-xl transition-colors ${
