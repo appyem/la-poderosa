@@ -6,7 +6,7 @@
 export const mockPrograms = [
   {
     id: 'prog-1',
-    title: 'La Mañana Poderosa',
+    title: 'La Poderosa en VIVO',
     host: 'Carlos Martínez',
     time: '06:00 - 10:00',
     category: 'Magazine',
@@ -179,11 +179,11 @@ export const mockGalleries = [
 ];
 
 export const mockSchedule = [
-  { day: 'Lunes', programs: ['La Mañana Poderosa', 'Ritmo Tropical', 'Noticias del Mediodía', 'Tarde Deportiva', 'Noche de Rock'] },
-  { day: 'Martes', programs: ['La Mañana Poderosa', 'Ritmo Tropical', 'Noticias del Mediodía', 'Tarde Deportiva', 'Noche de Rock'] },
-  { day: 'Miércoles', programs: ['La Mañana Poderosa', 'Ritmo Tropical', 'Noticias del Mediodía', 'Tarde Deportiva', 'Noche de Rock'] },
-  { day: 'Jueves', programs: ['La Mañana Poderosa', 'Ritmo Tropical', 'Noticias del Mediodía', 'Tarde Deportiva', 'Noche de Rock'] },
-  { day: 'Viernes', programs: ['La Mañana Poderosa', 'Ritmo Tropical', 'Noticias del Mediodía', 'Tarde Deportiva', 'Noche de Rock'] },
+  { day: 'Lunes', programs: ['La Poderosa en VIVO', 'Ritmo Tropical', 'Noticias del Mediodía', 'Tarde Deportiva', 'Noche de Rock'] },
+  { day: 'Martes', programs: ['La Poderosa en VIVO', 'Ritmo Tropical', 'Noticias del Mediodía', 'Tarde Deportiva', 'Noche de Rock'] },
+  { day: 'Miércoles', programs: ['La Poderosa en VIVO', 'Ritmo Tropical', 'Noticias del Mediodía', 'Tarde Deportiva', 'Noche de Rock'] },
+  { day: 'Jueves', programs: ['La Poderosa en VIVO', 'Ritmo Tropical', 'Noticias del Mediodía', 'Tarde Deportiva', 'Noche de Rock'] },
+  { day: 'Viernes', programs: ['La Poderosa en VIVO', 'Ritmo Tropical', 'Noticias del Mediodía', 'Tarde Deportiva', 'Noche de Rock'] },
   { day: 'Sábado', programs: ['Mañana Familiar', 'Sábado Musical', 'Deportes Total', 'Fiesta Nocturna'] },
   { day: 'Domingo', programs: ['Domingo Relax', 'Clásicos Inmortales', 'Revista Dominical', 'Cierre Musical'] },
 ];

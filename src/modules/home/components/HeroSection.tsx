@@ -4,6 +4,13 @@ import { mockPrograms } from '../../../core/data/mockData';
 export const HeroSection = () => {
   const liveProgram = mockPrograms.find(p => p.isLive) || mockPrograms[0];
 
+  // Función que avisa al reproductor global que debe reproducir
+  const handleEscucharAhora = () => {
+    window.dispatchEvent(new CustomEvent('radio-control', { 
+      detail: { action: 'play' } 
+    }));
+  };
+
   return (
     <section className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-brand-dark via-dark-surface to-dark-bg border border-dark-border">
       {/* Imagen de fondo con overlay */}
@@ -53,7 +60,10 @@ export const HeroSection = () => {
 
         {/* Botones de acción */}
         <div className="flex flex-wrap gap-3 pt-2">
-          <button className="flex items-center gap-2 px-6 py-3 rounded-lg bg-brand hover:bg-brand-light text-white font-semibold shadow-lg shadow-brand/30 transition-all hover:scale-105">
+          <button 
+            onClick={handleEscucharAhora}
+            className="flex items-center gap-2 px-6 py-3 rounded-lg bg-brand hover:bg-brand-light text-white font-semibold shadow-lg shadow-brand/30 transition-all hover:scale-105"
+          >
             <Play className="w-5 h-5 fill-current" />
             Escuchar Ahora
           </button>

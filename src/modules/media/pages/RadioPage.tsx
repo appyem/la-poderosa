@@ -213,7 +213,7 @@ export const RadioPage = () => {
               <div className="flex-1">
                 <p className="text-sm">
                   <span className="font-semibold">Juan</span>{' '}
-                  <span className="text-text-secondary">Saludos desde Bogotá 🇨🇴</span>
+                  <span className="text-text-secondary">Saludos desde Palestina 🇨🇴</span>
                 </p>
                 <p className="text-xs text-text-muted mt-1">Hace 5 min</p>
               </div>

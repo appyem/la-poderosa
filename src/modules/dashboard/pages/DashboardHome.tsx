@@ -50,7 +50,7 @@ export const DashboardHome = () => {
           {/* Visualización de barras CSS pura */}
           <div className="space-y-4">
             {[
-              { name: 'La Mañana Poderosa', value: 85, listeners: '2,847' },
+              { name: 'La Poderosa en VIVO', value: 85, listeners: '2,847' },
               { name: 'Ritmo Tropical', value: 62, listeners: '1,920' },
               { name: 'Noticias del Mediodía', value: 45, listeners: '1,450' },
               { name: 'Tarde Deportiva', value: 78, listeners: '2,100' },

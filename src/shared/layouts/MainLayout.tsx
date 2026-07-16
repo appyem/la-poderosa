@@ -18,7 +18,7 @@ export const MainLayout = () => {
   const [isMuted, setIsMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // Controlar reproducción
+  // 1. Controlar reproducción cuando cambia el estado isPlaying
   useEffect(() => {
     if (audioRef.current) {
       if (isPlaying) {
@@ -29,12 +29,32 @@ export const MainLayout = () => {
     }
   }, [isPlaying]);
 
-  // Controlar volumen
+  // 2. Controlar volumen
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : 0.75; // 75% de volumen por defecto
     }
   }, [isMuted]);
+
+  // 3. ESCUCHAR el mensaje del botón "Escuchar Ahora" del HeroSection
+  useEffect(() => {
+    const handleRadioControl = (event: Event) => {
+      // Especificamos el tipo correcto para evitar el error de ESLint
+      const customEvent = event as CustomEvent<{ action: 'play' | 'pause' }>;
+      if (customEvent.detail.action === 'play') {
+        setIsPlaying(true);
+      } else if (customEvent.detail.action === 'pause') {
+        setIsPlaying(false);
+      }
+    };
+
+    window.addEventListener('radio-control', handleRadioControl);
+
+    // Limpiar el evento cuando el componente se desmonte
+    return () => {
+      window.removeEventListener('radio-control', handleRadioControl);
+    };
+  }, []);
 
   const togglePlay = () => setIsPlaying(!isPlaying);
   const toggleMute = () => setIsMuted(!isMuted);
@@ -233,7 +253,7 @@ export const MainLayout = () => {
           </div>
         </div>
 
-        {/* Navegación Móvil Inferior (Ajustada para no tapar el reproductor) */}
+        {/* Navegación Móvil Inferior */}
         <nav className="fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-white/10 md:hidden h-16">
           <div className="flex justify-around items-center h-full">
             {mainNav.map((item) => (
