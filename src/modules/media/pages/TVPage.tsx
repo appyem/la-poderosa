@@ -1,15 +1,14 @@
-import { useState } from 'react'; // <--- ESTA LÍNEA FALTABA
+import { useState } from 'react';
 import { 
-  Play, Pause, Volume2, VolumeX, Maximize, Minimize,
-  Settings, Camera, MessageCircle, Heart, 
+  Camera, MessageCircle, Heart, 
   Share2, Users, Radio
 } from 'lucide-react';
 
+// ✅ URL del Plugin de Página de Facebook (100% Automático)
+// Cuando transmitas en vivo con Yolobox a Facebook, el video aparecerá automáticamente arriba.
+const FACEBOOK_PAGE_URL = "https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2Flapoderosadelcafe&tabs=timeline&width=800&height=600&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=false&appId";
+
 export const TVPage = () => {
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(false);
-  const [volume, setVolume] = useState(75);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [selectedCamera, setSelectedCamera] = useState(1);
   const [showChat, setShowChat] = useState(true);
 
@@ -29,32 +28,38 @@ export const TVPage = () => {
 
   return (
     <div className="space-y-6 py-6">
-      {/* Reproductor de Video */}
-      <div className={`relative rounded-2xl overflow-hidden bg-black border border-dark-border ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
-        {/* Video Placeholder (simulado con imagen) */}
-        <div className="relative aspect-video bg-gradient-to-br from-dark-surface to-dark-bg">
-          <img
-            src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=1200"
-            alt="TV Stream"
-            className="w-full h-full object-cover opacity-60"
+      {/* Reproductor de Video (Facebook Embed) */}
+      <div className="relative rounded-2xl overflow-hidden bg-black border border-dark-border">
+        
+        {/* Contenedor del Iframe con altura ajustada para Facebook */}
+        <div className="relative w-full h-[500px] md:h-[600px] bg-black">
+          <iframe
+            src={FACEBOOK_PAGE_URL}
+            title="Transmisión en Vivo Facebook"
+            className="w-full h-full absolute inset-0"
+            style={{ border: "none", overflow: "hidden" }}
+            scrolling="no"
+            frameBorder="0"
+            allowFullScreen={true}
+            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
           />
           
-          {/* Overlay de controles */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 opacity-0 hover:opacity-100 transition-opacity">
+          {/* Overlay de controles (Flotando sobre el video de Facebook) */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
             {/* Badge EN VIVO */}
-            <div className="absolute top-4 left-4 flex items-center gap-3">
+            <div className="absolute top-4 left-4 flex items-center gap-3 pointer-events-auto">
               <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-600 text-white text-xs font-bold uppercase">
                 <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
                 EN VIVO
               </span>
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-xs">
                 <Users className="w-3 h-3" />
-                <span>2,847 viendo</span>
+                <span>Viendo en Facebook</span>
               </div>
             </div>
 
-            {/* Selector de Cámaras */}
-            <div className="absolute top-4 right-4 flex gap-2">
+            {/* Selector de Cámaras (Decorativo / Branding) */}
+            <div className="absolute top-4 right-4 flex gap-2 pointer-events-auto">
               {cameras.map((cam) => (
                 <button
                   key={cam.id}
@@ -69,74 +74,10 @@ export const TVPage = () => {
                 </button>
               ))}
             </div>
-
-            {/* Controles Inferiores */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 space-y-3">
-              {/* Barra de progreso (simulada) */}
-              <div className="h-1 bg-white/20 rounded-full overflow-hidden">
-                <div className="h-full bg-brand w-full animate-pulse" />
-              </div>
-
-              {/* Botones de control */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <button 
-                    onClick={() => setIsPlaying(!isPlaying)}
-                    className="p-2 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors"
-                  >
-                    {isPlaying ? (
-                      <Pause className="w-5 h-5 text-white fill-current" />
-                    ) : (
-                      <Play className="w-5 h-5 text-white fill-current ml-0.5" />
-                    )}
-                  </button>
-
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => setIsMuted(!isMuted)}
-                      className="p-2 rounded-full hover:bg-white/20 transition-colors"
-                    >
-                      {isMuted || volume === 0 ? (
-                        <VolumeX className="w-5 h-5 text-white" />
-                      ) : (
-                        <Volume2 className="w-5 h-5 text-white" />
-                      )}
-                    </button>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={isMuted ? 0 : volume}
-                      onChange={(e) => {
-                        setVolume(Number(e.target.value));
-                        setIsMuted(false);
-                      }}
-                      className="w-24 h-1 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button className="p-2 rounded-full hover:bg-white/20 transition-colors">
-                    <Settings className="w-5 h-5 text-white" />
-                  </button>
-                  <button 
-                    onClick={() => setIsFullscreen(!isFullscreen)}
-                    className="p-2 rounded-full hover:bg-white/20 transition-colors"
-                  >
-                    {isFullscreen ? (
-                      <Minimize className="w-5 h-5 text-white" />
-                    ) : (
-                      <Maximize className="w-5 h-5 text-white" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Reacciones Flotantes */}
-          <div className="absolute bottom-20 right-4 flex flex-col gap-2">
+          <div className="absolute bottom-20 right-4 flex flex-col gap-2 pointer-events-auto">
             {reactions.map((reaction, index) => (
               <div
                 key={index}
@@ -182,7 +123,7 @@ export const TVPage = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-brand" />
-                <span>2,847 espectadores</span>
+                <span>Espectadores en Facebook</span>
               </div>
             </div>
 
