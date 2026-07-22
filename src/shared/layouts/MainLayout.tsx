@@ -139,21 +139,18 @@ export const MainLayout = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* ✅ AQUÍ SE AGREGÓ EL BOTÓN DE INSTALACIÓN PARA ESCRITORIO */}
-              <InstallAppButton />
-              
-              <button className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg bg-black/40 backdrop-blur-sm border border-white/10 hover:bg-white/10">
-                <Search className="w-4 h-4 text-white/70" />
-                <span className="text-sm text-white/70">Buscar...</span>
-              </button>
-              <button className="p-2 rounded-lg hover:bg-white/10 relative">
-                <Bell className="w-5 h-5 text-white/80" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand rounded-full" />
-              </button>
-              <button className="p-2 rounded-lg hover:bg-white/10">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand to-brand-dark" />
-              </button>
-            </div>
+  <button className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg bg-black/40 backdrop-blur-sm border border-white/10 hover:bg-white/10">
+    <Search className="w-4 h-4 text-white/70" />
+    <span className="text-sm text-white/70">Buscar...</span>
+  </button>
+  <button className="p-2 rounded-lg hover:bg-white/10 relative">
+    <Bell className="w-5 h-5 text-white/80" />
+    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand rounded-full" />
+  </button>
+  
+  {/* ✅ AHORA EL BOTÓN DE INSTALACIÓN VA AQUÍ (EN LUGAR DEL AVATAR) */}
+  <InstallAppButton />
+</div>
           </div>
         </header>
 
