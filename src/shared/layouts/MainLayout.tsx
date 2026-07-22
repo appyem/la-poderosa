@@ -6,6 +6,9 @@ import {
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
+// ✅ Importamos el componente del botón de instalación
+import { InstallAppButton } from '../../components/InstallAppButton';
+
 // ✅ URL DE TU STREAM DE RADIO.CO
 const STREAM_URL = "https://streams.radio.co/sf25c76934/listen";
 
@@ -39,7 +42,6 @@ export const MainLayout = () => {
   // 3. ESCUCHAR el mensaje del botón "Escuchar Ahora" del HeroSection
   useEffect(() => {
     const handleRadioControl = (event: Event) => {
-      // Especificamos el tipo correcto para evitar el error de ESLint
       const customEvent = event as CustomEvent<{ action: 'play' | 'pause' }>;
       if (customEvent.detail.action === 'play') {
         setIsPlaying(true);
@@ -50,7 +52,6 @@ export const MainLayout = () => {
 
     window.addEventListener('radio-control', handleRadioControl);
 
-    // Limpiar el evento cuando el componente se desmonte
     return () => {
       window.removeEventListener('radio-control', handleRadioControl);
     };
@@ -138,6 +139,9 @@ export const MainLayout = () => {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* ✅ AQUÍ SE AGREGÓ EL BOTÓN DE INSTALACIÓN PARA ESCRITORIO */}
+              <InstallAppButton />
+              
               <button className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg bg-black/40 backdrop-blur-sm border border-white/10 hover:bg-white/10">
                 <Search className="w-4 h-4 text-white/70" />
                 <span className="text-sm text-white/70">Buscar...</span>
@@ -200,6 +204,11 @@ export const MainLayout = () => {
                     <span className="font-medium">{item.label}</span>
                   </NavLink>
                 ))}
+                
+                {/* ✅ AQUÍ SE AGREGÓ EL BOTÓN DE INSTALACIÓN PARA EL MENÚ MÓVIL */}
+                <div className="pt-4 mt-4 border-t border-white/10 flex justify-center">
+                  <InstallAppButton />
+                </div>
               </nav>
             </div>
           )}
@@ -214,7 +223,6 @@ export const MainLayout = () => {
         {/* 🎵 REPRODUCTOR GLOBAL PERSISTENTE (Mini Player) */}
         <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-t border-white/10 px-4 py-3">
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-            {/* Info del programa */}
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className="w-10 h-10 rounded-lg bg-brand/20 flex items-center justify-center flex-shrink-0">
                 <Radio className="w-5 h-5 text-brand" />
@@ -225,7 +233,6 @@ export const MainLayout = () => {
               </div>
             </div>
 
-            {/* Controles Centrales */}
             <div className="flex items-center gap-4">
               <button 
                 onClick={togglePlay}
@@ -239,7 +246,6 @@ export const MainLayout = () => {
               </button>
             </div>
 
-            {/* Control de Volumen (Solo Desktop) */}
             <div className="hidden md:flex items-center gap-2 flex-1 justify-end">
               <button onClick={toggleMute} className="p-1 hover:bg-white/10 rounded-full transition-colors">
                 {isMuted ? <VolumeX className="w-5 h-5 text-white/70" /> : <Volume2 className="w-5 h-5 text-white/70" />}
