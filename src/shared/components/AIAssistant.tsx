@@ -18,7 +18,7 @@ export const AIAssistant = () => {
   return (
     <>
       {isOpen && (
-        <div className="fixed bottom-20 right-4 md:bottom-8 md:right-8 w-80 md:w-96 bg-dark-surface border border-dark-border rounded-2xl shadow-2xl flex flex-col overflow-hidden z-40 animate-slide-up">
+        <div className="fixed bottom-36 right-4 md:bottom-8 md:right-8 w-80 md:w-96 bg-dark-surface border border-dark-border rounded-2xl shadow-2xl flex flex-col overflow-hidden z-40 animate-slide-up">
           <div className="p-4 bg-brand text-white flex items-center justify-between">
             <div className="flex items-center gap-2"><Sparkles className="w-5 h-5" /><span className="font-bold">Asistente IA</span></div>
             <button onClick={() => setIsOpen(false)}><X className="w-5 h-5" /></button>
@@ -38,7 +38,7 @@ export const AIAssistant = () => {
           </div>
         </div>
       )}
-      <button onClick={() => setIsOpen(!isOpen)} className="fixed bottom-20 right-4 md:bottom-8 md:right-8 w-14 h-14 rounded-full bg-brand hover:bg-brand-light text-white shadow-lg shadow-brand/40 flex items-center justify-center z-50 transition-transform hover:scale-110">
+      <button onClick={() => setIsOpen(!isOpen)} className="fixed bottom-36 right-4 md:bottom-8 md:right-8 w-14 h-14 rounded-full bg-brand hover:bg-brand-light text-white shadow-lg shadow-brand/40 flex items-center justify-center z-50 transition-transform hover:scale-110">
         {isOpen ? <X className="w-6 h-6" /> : <Bot className="w-7 h-7" />}
       </button>
     </>
