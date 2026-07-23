@@ -9,6 +9,7 @@ import {
   doc, 
   Timestamp 
 } from 'firebase/firestore';
+import { getDoc, setDoc } from 'firebase/firestore';
 import { db } from './config';
 import type { Program, News, Tenant } from '../types/models';
 import { 
@@ -319,4 +320,29 @@ export const uploadImagenNoticia = async (archivo: File): Promise<string> => {
   // Obtenemos y retornamos la URL pública de descarga
   const urlDescarga = await getDownloadURL(snapshot.ref);
   return urlDescarga;
+};
+
+// ==========================================
+// FUNCIONES PARA CONFIGURACIÓN DE TV (YOUTUBE)
+// ==========================================
+export const getTvConfig = async (): Promise<string> => {
+  try {
+    const docRef = doc(db, 'configuracion', 'tv_en_vivo');
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data().youtubeUrl || '';
+    }
+    return '';
+  } catch (error) {
+    console.error('Error al obtener config de TV:', error);
+    return '';
+  }
+};
+
+export const updateTvUrl = async (youtubeUrl: string) => {
+  const docRef = doc(db, 'configuracion', 'tv_en_vivo');
+  await setDoc(docRef, { 
+    youtubeUrl, 
+    updatedAt: Timestamp.now() 
+  }, { merge: true });
 };
