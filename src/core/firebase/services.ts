@@ -7,7 +7,8 @@ import {
   addDoc, 
   deleteDoc, 
   doc, 
-  Timestamp 
+  Timestamp,
+  updateDoc 
 } from 'firebase/firestore';
 import { getDoc, setDoc } from 'firebase/firestore';
 import { db } from './config';
@@ -345,4 +346,55 @@ export const updateTvUrl = async (youtubeUrl: string) => {
     youtubeUrl, 
     updatedAt: Timestamp.now() 
   }, { merge: true });
+};
+
+// ==========================================
+// FUNCIONES PARA PUBLICIDAD
+// ==========================================
+export interface Anuncio {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  empresa: string;
+  imagenUrl: string;
+  enlaceUrl: string;
+  activo: boolean;
+  tenantId: string;
+  createdAt: Timestamp;
+}
+
+export const addAnuncio = async (anuncioData: Omit<Anuncio, 'id' | 'tenantId' | 'createdAt'>) => {
+  const docRef = await addDoc(collection(db, 'anuncios'), {
+    ...anuncioData,
+    tenantId: TENANT_ID,
+    createdAt: Timestamp.now()
+  });
+  return docRef.id;
+};
+
+export const getAnuncios = async (): Promise<Anuncio[]> => {
+  const q = query(collection(db, 'anuncios'), where('tenantId', '==', TENANT_ID));
+  const snapshot = await getDocs(q);
+  const anuncios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Anuncio));
+  
+  // Filtrar solo los activos y ordenar por fecha de creación (más recientes primero)
+  return anuncios
+    .filter(a => a.activo)
+    .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+};
+
+export const updateAnuncio = async (anuncioId: string, data: Partial<Anuncio>) => {
+  await updateDoc(doc(db, 'anuncios', anuncioId), data);
+};
+
+export const deleteAnuncio = async (anuncioId: string) => {
+  await deleteDoc(doc(db, 'anuncios', anuncioId));
+};
+
+export const uploadImagenAnuncio = async (archivo: File): Promise<string> => {
+  const nombreArchivo = `anuncios/${Date.now()}_${archivo.name}`;
+  const storageRef = ref(storage, nombreArchivo);
+  const snapshot = await uploadBytes(storageRef, archivo);
+  const urlDescarga = await getDownloadURL(snapshot.ref);
+  return urlDescarga;
 };

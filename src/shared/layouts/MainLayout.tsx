@@ -1,3 +1,4 @@
+import { AdBanner } from '../components/AdBanner';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { 
   Home, Radio, Tv, Newspaper, Calendar, ImageIcon, 
@@ -156,6 +157,9 @@ export const MainLayout = () => {
           </div>
         </header>
 
+        {/* ✅ BANNER DE PUBLICIDAD (Aparece en todas las páginas públicas) */}
+        <AdBanner />
+
         <div className="flex flex-1">
           <aside className="hidden md:flex flex-col w-60 border-r border-white/10 bg-black/40 backdrop-blur-xl sticky top-[61px] h-[calc(100vh-61px)] overflow-y-auto">
             <nav className="p-3 space-y-1 flex-1">
@@ -177,7 +181,6 @@ export const MainLayout = () => {
                 </NavLink>
               ))}
             </nav>
-            {/* ✅ Se eliminó el bloque separado de Panel Admin que quedaba tapado */}
           </aside>
 
           {mobileMenuOpen && (
@@ -211,7 +214,7 @@ export const MainLayout = () => {
           )}
 
           <main className="flex-1 overflow-y-auto animate-fade-in pb-32 md:pb-6">
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-7xl mx-auto px-4 md:px-0">
               <Outlet key={location.pathname} />
             </div>
           </main>

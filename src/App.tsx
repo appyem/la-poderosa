@@ -25,6 +25,8 @@ import { LoginPage } from './modules/auth/pages/LoginPage';
 import { ProtectedRoute } from './shared/components/ProtectedRoute';
 import { NoticiasPodcastsPage } from './modules/dashboard/pages/NoticiasPodcastsPage';
 import { StreamingPage } from './modules/dashboard/pages/StreamingPage';
+import { PublicidadPage } from './modules/dashboard/pages/PublicidadPage'; // ✅ IMPORTACIÓN AGREGADA
+
 const Placeholder = ({ title }: { title: string }) => (
   <div className="flex items-center justify-center min-h-[60vh]">
     <div className="text-center space-y-4">
@@ -40,7 +42,7 @@ const Placeholder = ({ title }: { title: string }) => (
 function App() {
   return (
     <BrowserRouter>
-    <SplashScreen />
+      <SplashScreen />
       <Routes>
         {/* Rutas Públicas */}
         <Route path="/" element={<MainLayout />}>
@@ -62,7 +64,7 @@ function App() {
           <Route path="*" element={<Placeholder title="Página no encontrada" />} />
         </Route>
 
-               {/* Ruta pública de Login */}
+        {/* Ruta pública de Login */}
         <Route path="/login" element={<LoginPage />} />
 
         {/* Rutas protegidas del Panel de Administrador */}
@@ -79,25 +81,11 @@ function App() {
           <Route path="djs" element={<DJsPage />} />
           <Route path="programacion" element={<ProgramasPage />} />
           <Route path="contenido" element={<NoticiasPodcastsPage />} />
-          <Route path="streaming" element={<StreamingPage />} /> {/* ✅ AQUÍ SE USA STREAMINGPAGE */}
-          <Route path="publicidad" element={<Placeholder title="Publicidad" />} />
+          <Route path="streaming" element={<StreamingPage />} />
+          <Route path="publicidad" element={<PublicidadPage />} /> {/* ✅ RUTA CORREGIDA AQUÍ */}
           <Route path="analiticas" element={<Placeholder title="Analíticas" />} />
           <Route path="ia" element={<Placeholder title="Herramientas IA" />} />
           <Route path="configuracion" element={<Placeholder title="Configuración" />} />
-        </Route>
-
-        {/* Rutas Administrativas */}
-        <Route path="/dashboard" element={<AdminLayout />}>
-          <Route index element={<DashboardHome />} />
-          <Route path="usuarios" element={<Placeholder title="Gestión de Usuarios y Roles" />} />
-          <Route path="djs" element={<DJsPage />} />
-          <Route path="programacion" element={<ProgramasPage />} />
-          <Route path="contenido" element={<Placeholder title="Gestión de Noticias y Podcasts" />} />
-          <Route path="streaming" element={<Placeholder title="Control de Streaming" />} />
-          <Route path="publicidad" element={<Placeholder title="Gestión de Publicidad" />} />
-          <Route path="analiticas" element={<Placeholder title="Analíticas Detalladas" />} />
-          <Route path="ia" element={<Placeholder title="Herramientas de IA" />} />
-          <Route path="configuracion" element={<Placeholder title="Configuración Multi-Tenant" />} />
         </Route>
       </Routes>
       <AIAssistant />
