@@ -84,6 +84,8 @@ export const MainLayout = () => {
     { to: '/comunidad', icon: Users, label: 'Comunidad' },
     { to: '/publicidad', icon: Megaphone, label: 'Publicidad' },
     { to: '/contacto', icon: Phone, label: 'Contacto' },
+    // ✅ Panel Admin agregado al final de la lista principal
+    { to: '/dashboard', icon: LayoutDashboard, label: 'Panel Admin', admin: true },
   ];
 
   return (
@@ -139,18 +141,18 @@ export const MainLayout = () => {
             </div>
 
             <div className="flex items-center gap-2">
-  <button className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg bg-black/40 backdrop-blur-sm border border-white/10 hover:bg-white/10">
-    <Search className="w-4 h-4 text-white/70" />
-    <span className="text-sm text-white/70">Buscar...</span>
-  </button>
-  <button className="p-2 rounded-lg hover:bg-white/10 relative">
-    <Bell className="w-5 h-5 text-white/80" />
-    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand rounded-full" />
-  </button>
-  
-  {/* ✅ AHORA EL BOTÓN DE INSTALACIÓN VA AQUÍ (EN LUGAR DEL AVATAR) */}
-  <InstallAppButton />
-</div>
+              <button className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg bg-black/40 backdrop-blur-sm border border-white/10 hover:bg-white/10">
+                <Search className="w-4 h-4 text-white/70" />
+                <span className="text-sm text-white/70">Buscar...</span>
+              </button>
+              <button className="p-2 rounded-lg hover:bg-white/10 relative">
+                <Bell className="w-5 h-5 text-white/80" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand rounded-full" />
+              </button>
+              
+              {/* ✅ BOTÓN DE INSTALACIÓN */}
+              <InstallAppButton />
+            </div>
           </div>
         </header>
 
@@ -164,9 +166,9 @@ export const MainLayout = () => {
                   end={item.to === '/'} 
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm font-medium ${
-                      isActive 
-                        ? 'bg-brand/30 backdrop-blur-sm text-white border-l-2 border-brand' 
-                        : 'text-white/70 hover:bg-white/10 hover:text-white'
+                      item.admin
+                        ? (isActive ? 'bg-brand text-white border-l-2 border-brand' : 'text-brand hover:bg-brand/20')
+                        : (isActive ? 'bg-brand/30 backdrop-blur-sm text-white border-l-2 border-brand' : 'text-white/70 hover:bg-white/10 hover:text-white')
                     }`
                   }
                 >
@@ -175,11 +177,7 @@ export const MainLayout = () => {
                 </NavLink>
               ))}
             </nav>
-            <div className="p-3 border-t border-white/10">
-              <NavLink to="/dashboard" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white">
-                <LayoutDashboard className="w-5 h-5" /> Panel Admin
-              </NavLink>
-            </div>
+            {/* ✅ Se eliminó el bloque separado de Panel Admin que quedaba tapado */}
           </aside>
 
           {mobileMenuOpen && (
@@ -193,7 +191,9 @@ export const MainLayout = () => {
                     onClick={() => setMobileMenuOpen(false)} 
                     className={({ isActive }) => 
                       `flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                        isActive ? 'bg-brand/20 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'
+                        item.admin
+                          ? (isActive ? 'bg-brand text-white' : 'text-brand hover:bg-brand/20')
+                          : (isActive ? 'bg-brand/20 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white')
                       }`
                     }
                   >
@@ -202,7 +202,7 @@ export const MainLayout = () => {
                   </NavLink>
                 ))}
                 
-                {/* ✅ AQUÍ SE AGREGÓ EL BOTÓN DE INSTALACIÓN PARA EL MENÚ MÓVIL */}
+                {/* ✅ BOTÓN DE INSTALACIÓN PARA EL MENÚ MÓVIL */}
                 <div className="pt-4 mt-4 border-t border-white/10 flex justify-center">
                   <InstallAppButton />
                 </div>

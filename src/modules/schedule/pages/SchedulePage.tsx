@@ -1,22 +1,51 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Clock, Radio } from 'lucide-react';
-import { mockSchedule, mockPrograms } from '../../../core/data/mockData';
+import { 
+  getProgramasRadio, 
+  getDJs, 
+  type ProgramaRadio, 
+  type DJ 
+} from '../../../core/firebase/services';
 
 export const SchedulePage = () => {
-  const days = mockSchedule.map(s => s.day);
   const [selectedDay, setSelectedDay] = useState(0);
+  const [programs, setPrograms] = useState<ProgramaRadio[]>([]);
+  const [djs, setDjs] = useState<DJ[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const currentSchedule = mockSchedule[selectedDay];
-  
-  // Horarios fijos para la parrilla
-  const timeSlots = [
-    { time: '06:00', label: 'Mañana' },
-    { time: '10:00', label: 'Media mañana' },
-    { time: '13:00', label: 'Mediodía' },
-    { time: '14:00', label: 'Tarde' },
-    { time: '18:00', label: 'Media tarde' },
-    { time: '20:00', label: 'Noche' },
-  ];
+  const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [programsData, djsData] = await Promise.all([
+          getProgramasRadio(),
+          getDJs()
+        ]);
+        setPrograms(programsData);
+        setDjs(djsData);
+      } catch (err) {
+        console.error('Error al cargar la programación:', err);
+        setError('Error al cargar la programación');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  const currentDay = DIAS_SEMANA[selectedDay];
+  const programsForDay = programs.filter(prog => 
+    prog.dias.includes(currentDay)
+  ).sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
+
+  // Calcular hora actual para el indicador "EN VIVO"
+  const now = new Date();
+  const currentHours = now.getHours().toString().padStart(2, '0');
+  const currentMinutes = now.getMinutes().toString().padStart(2, '0');
+  const currentTime = `${currentHours}:${currentMinutes}`;
 
   return (
     <div className="space-y-8 py-6">
@@ -28,7 +57,7 @@ export const SchedulePage = () => {
 
       {/* Selector de Días */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        {days.map((day, index) => (
+        {DIAS_SEMANA.map((day, index) => (
           <button
             key={day}
             onClick={() => setSelectedDay(index)}
@@ -47,57 +76,70 @@ export const SchedulePage = () => {
       <div className="space-y-3">
         <h2 className="text-xl font-semibold flex items-center gap-2">
           <Clock className="w-5 h-5 text-brand" />
-          Programación del {currentSchedule.day}
+          Programación del {currentDay}
         </h2>
 
-        <div className="space-y-2">
-          {timeSlots.map((slot, index) => {
-            const program = mockPrograms[index % mockPrograms.length];
-            const isLive = index === 1; // Simulamos que el segundo slot está en vivo
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand border-t-transparent"></div>
+          </div>
+        ) : error ? (
+          <div className="text-center py-8 text-red-500">
+            {error}
+          </div>
+        ) : programsForDay.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-4xl mb-4">📅</div>
+            <p className="text-lg text-text-secondary">No hay programas programados para {currentDay}</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {programsForDay.map((program) => {
+              const isLive = program.horaInicio <= currentTime && currentTime <= program.horaFin;
+              const dj = djs.find(d => d.id === program.djId);
 
-            return (
-              <div
-                key={slot.time}
-                className={`group flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer ${
-                  isLive
-                    ? 'bg-brand/10 border-brand/30 hover:bg-brand/15'
-                    : 'bg-dark-surface border-dark-border hover:bg-dark-elevated'
-                }`}
-              >
-                {/* Horario */}
-                <div className="flex-shrink-0 sm:w-24 text-center">
-                  <p className="text-lg font-bold">{slot.time}</p>
-                  <p className="text-xs text-text-muted">{slot.label}</p>
+              return (
+                <div
+                  key={program.id}
+                  className={`group flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer ${
+                    isLive
+                      ? 'bg-brand/10 border-brand/30 hover:bg-brand/15'
+                      : 'bg-dark-surface border-dark-border hover:bg-dark-elevated'
+                  }`}
+                >
+                  {/* Horario */}
+                  <div className="flex-shrink-0 sm:w-24 text-center">
+                    <p className="text-lg font-bold">{program.horaInicio} - {program.horaFin}</p>
+                    <p className="text-xs text-text-muted">Programa</p>
+                  </div>
+
+                  {/* Imagen - Placeholder para el DJ */}
+                  <div className="w-full sm:w-16 h-24 sm:h-16 rounded-lg bg-brand/20 flex items-center justify-center">
+                    <span className="text-white text-2xl">🎤</span>
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-lg group-hover:text-brand transition-colors">
+                      {program.nombre}
+                    </h3>
+                    <p className="text-sm text-text-secondary">{dj ? dj.nombre : 'DJ Desconocido'}</p>
+                    <p className="text-xs text-text-muted mt-1">{program.descripcion || 'Sin descripción'}</p>
+                  </div>
+
+                  {/* Badge en vivo */}
+                  {isLive && (
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-600 text-white text-xs font-bold self-start sm:self-center">
+                      <Radio className="w-3 h-3" />
+                      EN VIVO
+                    </span>
+                  )}
                 </div>
-
-                {/* Imagen */}
-                <img
-                  src={program.image}
-                  alt={program.title}
-                  className="w-full sm:w-16 h-24 sm:h-16 rounded-lg object-cover"
-                />
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-lg group-hover:text-brand transition-colors">
-                    {program.title}
-                  </h3>
-                  <p className="text-sm text-text-secondary">{program.host}</p>
-                  <p className="text-xs text-text-muted mt-1">{program.category}</p>
-                </div>
-
-                {/* Badge en vivo */}
-                {isLive && (
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-600 text-white text-xs font-bold self-start sm:self-center">
-                    <Radio className="w-3 h-3" />
-                    EN VIVO
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
-}
+};

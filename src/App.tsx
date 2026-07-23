@@ -19,7 +19,8 @@ import { ContactPage } from './modules/contact/pages/ContactPage';
 import { ChatPage } from './modules/community/pages/ChatPage';
 import { CommunityPage } from './modules/community/pages/CommunityPage';
 import { DashboardHome } from './modules/dashboard/pages/DashboardHome';
-
+import { DJsPage } from './modules/dashboard/pages/DJsPage';
+import { ProgramasPage } from './modules/dashboard/pages/ProgramasPage';
 const Placeholder = ({ title }: { title: string }) => (
   <div className="flex items-center justify-center min-h-[60vh]">
     <div className="text-center space-y-4">
@@ -61,7 +62,8 @@ function App() {
         <Route path="/dashboard" element={<AdminLayout />}>
           <Route index element={<DashboardHome />} />
           <Route path="usuarios" element={<Placeholder title="Gestión de Usuarios y Roles" />} />
-          <Route path="programacion" element={<Placeholder title="Gestión de Programación" />} />
+          <Route path="djs" element={<DJsPage />} />
+          <Route path="programacion" element={<ProgramasPage />} />
           <Route path="contenido" element={<Placeholder title="Gestión de Noticias y Podcasts" />} />
           <Route path="streaming" element={<Placeholder title="Control de Streaming" />} />
           <Route path="publicidad" element={<Placeholder title="Gestión de Publicidad" />} />

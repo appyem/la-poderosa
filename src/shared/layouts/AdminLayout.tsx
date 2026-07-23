@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { 
-  LayoutDashboard, Users, Radio, Calendar, Newspaper, 
+  LayoutDashboard, Users, User, Radio, Calendar, Newspaper, 
   Megaphone, BarChart3, Settings, LogOut, ChevronDown, Building2, Bot 
 } from 'lucide-react';
 
@@ -12,6 +12,7 @@ export const AdminLayout = () => {
   const menuItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Resumen' },
     { to: '/dashboard/usuarios', icon: Users, label: 'Usuarios y Roles' },
+    { to: '/dashboard/djs', icon: User, label: 'Gestión de DJs' }, // ✅ NUEVO ENLACE AGREGADO
     { to: '/dashboard/programacion', icon: Calendar, label: 'Programación' },
     { to: '/dashboard/contenido', icon: Newspaper, label: 'Noticias y Podcasts' },
     { to: '/dashboard/streaming', icon: Radio, label: 'Control de Streaming' },

@@ -1,4 +1,8 @@
-import { Users, Radio, DollarSign, TrendingUp, Activity } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Users, Radio, DollarSign, TrendingUp, Activity, Clock, Calendar, Loader2 } from 'lucide-react';
+import { getProgramasRadio, getDJs, type ProgramaRadio, type DJ } from '../../../core/firebase/services';
+
+const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 export const DashboardHome = () => {
   const metrics = [
@@ -14,6 +18,42 @@ export const DashboardHome = () => {
     { action: 'Alerta de streaming', entity: 'Caída de señal en Cámara 2', time: 'Hace 3 horas', type: 'warning' },
     { action: 'Nuevo artículo publicado', entity: 'Festival de Verano 2026', time: 'Hace 5 horas', type: 'success' },
   ];
+
+  // Estados para la parrilla real
+  const [programasHoy, setProgramasHoy] = useState<ProgramaRadio[]>([]);
+  const [djs, setDjs] = useState<DJ[]>([]);
+  const [loadingParrilla, setLoadingParrilla] = useState(true);
+
+  useEffect(() => {
+    Promise.all([getProgramasRadio(), getDJs()])
+      .then(([programasData, djsData]) => {
+        // Calcular día actual (0 = Domingo, 1 = Lunes, etc.)
+        const hoy = new Date().getDay();
+        const nombreDia = DIAS_SEMANA[hoy];
+        
+        // Filtrar programas del día actual y ordenarlos por hora
+        const programasDelDia = programasData
+          .filter(prog => prog.dias.includes(nombreDia))
+          .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
+        
+        setProgramasHoy(programasDelDia);
+        setDjs(djsData);
+        setLoadingParrilla(false);
+      })
+      .catch(error => {
+        console.error('Error al cargar la parrilla:', error);
+        setLoadingParrilla(false);
+      });
+  }, []);
+
+  // Calcular hora actual para detectar programa en vivo
+  const ahora = new Date();
+  const horaActual = `${ahora.getHours().toString().padStart(2, '0')}:${ahora.getMinutes().toString().padStart(2, '0')}`;
+
+  const getDJNombre = (djId: string) => {
+    const dj = djs.find(d => d.id === djId);
+    return dj ? dj.nombre : 'Sin asignar';
+  };
 
   return (
     <div className="space-y-8">
@@ -36,40 +76,71 @@ export const DashboardHome = () => {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Gráfico Simulado (Ocupación de Audiencia) */}
+        {/* ✅ Parrilla Real del Día (Reemplaza el gráfico simulado) */}
         <div className="lg:col-span-2 p-6 rounded-xl bg-dark-surface border border-dark-border">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold">Audiencia por Programa (Últimas 24h)</h3>
-            <select className="bg-dark-bg border border-dark-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-brand">
-              <option>Últimas 24 horas</option>
-              <option>Última semana</option>
-              <option>Último mes</option>
-            </select>
+            <h3 className="text-lg font-bold flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-brand" />
+              Programación de Hoy ({DIAS_SEMANA[ahora.getDay()]})
+            </h3>
+            <span className="text-xs text-text-secondary">
+              {programasHoy.length} programa{programasHoy.length !== 1 ? 's' : ''}
+            </span>
           </div>
           
-          {/* Visualización de barras CSS pura */}
-          <div className="space-y-4">
-            {[
-              { name: 'La Poderosa en VIVO', value: 85, listeners: '2,847' },
-              { name: 'Ritmo Tropical', value: 62, listeners: '1,920' },
-              { name: 'Noticias del Mediodía', value: 45, listeners: '1,450' },
-              { name: 'Tarde Deportiva', value: 78, listeners: '2,100' },
-              { name: 'Noche de Rock', value: 30, listeners: '890' },
-            ].map((program, i) => (
-              <div key={i} className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="font-medium">{program.name}</span>
-                  <span className="text-text-secondary">{program.listeners} oyentes</span>
-                </div>
-                <div className="h-2.5 bg-dark-bg rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-brand to-brand-light rounded-full transition-all duration-1000"
-                    style={{ width: `${program.value}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+          {loadingParrilla ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 text-brand animate-spin" />
+            </div>
+          ) : programasHoy.length === 0 ? (
+            <div className="text-center py-12">
+              <Calendar className="w-16 h-16 text-text-muted mx-auto mb-4" />
+              <p className="text-text-secondary">No hay programas programados para hoy</p>
+              <p className="text-xs text-text-muted mt-1">Agregue programas en Gestión de Programación</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {programasHoy.map((programa) => {
+                const enVivo = programa.horaInicio <= horaActual && horaActual <= programa.horaFin;
+                
+                return (
+                  <div
+                    key={programa.id}
+                    className={`flex items-center gap-4 p-4 rounded-lg border transition-all ${
+                      enVivo
+                        ? 'bg-brand/10 border-brand/30'
+                        : 'bg-dark-bg border-dark-border hover:border-brand/20'
+                    }`}
+                  >
+                    {/* Horario */}
+                    <div className="flex-shrink-0 w-20 text-center">
+                      <p className="text-sm font-bold text-white">{programa.horaInicio}</p>
+                      <p className="text-xs text-text-muted">{programa.horaFin}</p>
+                    </div>
+
+                    {/* Info del programa */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-semibold text-white truncate">{programa.nombre}</h4>
+                        {enVivo && (
+                          <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-bold">
+                            <Radio className="w-3 h-3" />
+                            EN VIVO
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-text-secondary truncate">
+                        🎤 {getDJNombre(programa.djId)}
+                      </p>
+                    </div>
+
+                    {/* Icono de reloj */}
+                    <Clock className="w-4 h-4 text-text-muted flex-shrink-0" />
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Actividad Reciente */}
