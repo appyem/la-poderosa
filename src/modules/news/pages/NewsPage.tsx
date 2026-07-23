@@ -1,96 +1,272 @@
 import { useState, useEffect } from 'react';
-import { Search, Loader2 } from 'lucide-react';
-import { NewsCard } from '../../../shared/components/NewsCard';
+import { Search, Loader2, X, Calendar, User as UserIcon } from 'lucide-react';
 import { getNoticiasDelDia, type Noticia } from '../../../core/firebase/services';
-
-// Adaptador: Convierte el tipo de Firebase al que espera NewsCard
-interface AdaptedNews {
-  id: string;
-  title: string;
-  summary: string;
-  author: string;
-  date: string;
-  category: string;
-  image: string;
-  isFeatured: boolean;
-  readTime: string;
-}
-
-const adaptNoticia = (n: Noticia, isFeatured = false): AdaptedNews => ({
-  id: n.id,
-  title: n.titulo,
-  summary: n.resumen,
-  author: n.autor,
-  date: n.fecha.toDate().toISOString().split('T')[0],
-  category: n.categoria,
-  image: n.imagenUrl,
-  isFeatured,
-  readTime: '3 min' // Valor por defecto
-});
+import { Timestamp } from 'firebase/firestore';
 
 export const NewsPage = () => {
-  const [noticias, setNoticias] = useState<AdaptedNews[]>([]);
+  const [noticias, setNoticias] = useState<Noticia[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busqueda, setBusqueda] = useState('');
+  const [noticiaSeleccionada, setNoticiaSeleccionada] = useState<Noticia | null>(null);
+
+  const cargarNoticias = async () => {
+    setLoading(true);
+    try {
+      const data = await getNoticiasDelDia();
+      setNoticias(data);
+    } catch (error) {
+      console.error('Error al cargar noticias:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    getNoticiasDelDia()
-      .then(data => {
-        if (data.length > 0) {
-          const featured = adaptNoticia(data[0], true);
-          const others = data.slice(1).map(n => adaptNoticia(n, false));
-          setNoticias([featured, ...others]);
-        }
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Error al cargar noticias:', err);
-        setLoading(false);
-      });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    cargarNoticias();
   }, []);
 
-  if (loading) {
-    return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 text-brand animate-spin" /></div>;
-  }
+  // Cerrar modal con tecla ESC
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setNoticiaSeleccionada(null);
+    };
+    if (noticiaSeleccionada) {
+      window.addEventListener('keydown', handleEsc);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+      document.body.style.overflow = '';
+    };
+  }, [noticiaSeleccionada]);
 
-  const featuredNews = noticias[0] || null;
-  const otherNews = noticias.slice(1);
+  const formatFecha = (timestamp: Timestamp) => {
+    return timestamp.toDate().toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Filtrar noticias por búsqueda
+  const noticiasFiltradas = noticias.filter(n =>
+    n.titulo.toLowerCase().includes(busqueda.toLowerCase()) ||
+    n.resumen.toLowerCase().includes(busqueda.toLowerCase()) ||
+    n.categoria.toLowerCase().includes(busqueda.toLowerCase())
+  );
+
+  const featuredNews = noticiasFiltradas[0] || null;
+  const otherNews = noticiasFiltradas.slice(1);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="w-8 h-8 text-brand animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 py-6">
+      {/* Header */}
       <div className="space-y-4">
         <h1 className="text-3xl font-bold text-white">Noticias del Día</h1>
-        <p className="text-text-secondary">Mantente informado con las últimas novedades de hoy.</p>
-        
+        <p className="text-text-secondary">Mantente informado con las últimas novedades.</p>
+
         <div className="relative max-w-xl">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
-          <input 
-            type="text" 
-            placeholder="Buscar noticias..." 
+          <input
+            type="text"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar noticias por título, categoría o contenido..."
             className="w-full pl-10 pr-4 py-3 rounded-xl bg-dark-surface border border-dark-border text-white focus:border-brand focus:outline-none transition-colors"
           />
         </div>
       </div>
 
-      {featuredNews ? (
-        <NewsCard news={featuredNews} variant="featured" />
-      ) : (
+      {noticiasFiltradas.length === 0 ? (
         <div className="text-center py-12 bg-dark-surface rounded-xl border border-dark-border">
-          <p className="text-text-secondary">No hay noticias destacadas para hoy.</p>
+          <p className="text-text-secondary text-lg">
+            {busqueda ? 'No se encontraron noticias con esa búsqueda.' : 'No hay noticias publicadas hoy.'}
+          </p>
         </div>
+      ) : (
+        <>
+          {/* Noticia Destacada */}
+          {featuredNews && (
+            <article
+              onClick={() => setNoticiaSeleccionada(featuredNews)}
+              className="group relative rounded-2xl overflow-hidden bg-dark-surface border border-dark-border hover:border-brand/50 transition-all cursor-pointer hover:shadow-xl hover:shadow-brand/10"
+            >
+              <div className="relative overflow-hidden">
+                <img
+                  src={featuredNews.imagenUrl}
+                  alt={featuredNews.titulo}
+                  className="w-full h-64 md:h-80 object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-dark-surface via-dark-surface/50 to-transparent" />
+                <div className="absolute top-4 left-4">
+                  <span className="px-3 py-1.5 rounded-full bg-brand/90 text-white text-xs font-bold uppercase backdrop-blur-sm">
+                    ⭐ Destacada • {featuredNews.categoria || 'General'}
+                  </span>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                  <h2 className="text-2xl md:text-3xl font-bold text-white mb-2 group-hover:text-brand transition-colors">
+                    {featuredNews.titulo}
+                  </h2>
+                  <p className="text-text-secondary line-clamp-2 max-w-3xl">
+                    {featuredNews.resumen}
+                  </p>
+                  <div className="flex items-center gap-4 mt-3 text-sm text-text-muted">
+                    <span className="flex items-center gap-1">
+                      <UserIcon className="w-4 h-4" />
+                      {featuredNews.autor || 'Redacción'}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-4 h-4" />
+                      {formatFecha(featuredNews.fecha)}
+                    </span>
+                    <span className="text-brand font-medium ml-auto">
+                      Leer noticia completa →
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </article>
+          )}
+
+          {/* Grid de Noticias */}
+          {otherNews.length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold text-white">Más recientes</h2>
+              <div className="grid md:grid-cols-2 gap-4">
+                {otherNews.map((noticia) => (
+                  <article
+                    key={noticia.id}
+                    onClick={() => setNoticiaSeleccionada(noticia)}
+                    className="group bg-dark-surface border border-dark-border rounded-xl overflow-hidden hover:border-brand/50 transition-all cursor-pointer hover:scale-[1.01] hover:shadow-lg hover:shadow-brand/5"
+                  >
+                    <div className="relative overflow-hidden">
+                      <img
+                        src={noticia.imagenUrl}
+                        alt={noticia.titulo}
+                        className="w-full h-44 object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute top-3 left-3">
+                        <span className="px-2 py-1 rounded bg-brand/90 text-white text-xs font-bold uppercase backdrop-blur-sm">
+                          {noticia.categoria || 'General'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="p-5">
+                      <h3 className="text-lg font-bold text-white mb-2 line-clamp-2 group-hover:text-brand transition-colors">
+                        {noticia.titulo}
+                      </h3>
+                      <p className="text-sm text-text-secondary line-clamp-2">
+                        {noticia.resumen}
+                      </p>
+                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-dark-border">
+                        <span className="text-xs text-text-muted flex items-center gap-1">
+                          <UserIcon className="w-3 h-3" />
+                          {noticia.autor || 'Redacción'}
+                        </span>
+                        <span className="text-xs text-brand font-medium">
+                          Leer más →
+                        </span>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
-      <div className="space-y-4">
-        <h2 className="text-xl font-bold text-white">Más recientes</h2>
-        {otherNews.length > 0 ? (
-          <div className="grid md:grid-cols-2 gap-4">
-            {otherNews.map((news) => (
-              <NewsCard key={news.id} news={news} />
-            ))}
+      {/* ================= MODAL DE NOTICIA COMPLETA ================= */}
+      {noticiaSeleccionada && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setNoticiaSeleccionada(null)}
+        >
+          {/* Backdrop oscuro con blur */}
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+
+          {/* Contenido del Modal */}
+          <div
+            className="relative w-full max-w-4xl max-h-[90vh] bg-dark-surface border border-dark-border rounded-2xl overflow-hidden shadow-2xl animate-scale-in flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Botón de Cerrar */}
+            <button
+              onClick={() => setNoticiaSeleccionada(null)}
+              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-sm transition-colors"
+              aria-label="Cerrar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Scroll interno */}
+            <div className="overflow-y-auto">
+              {/* Imagen Grande */}
+              <div className="relative w-full aspect-[16/9] bg-black">
+                <img
+                  src={noticiaSeleccionada.imagenUrl}
+                  alt={noticiaSeleccionada.titulo}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-dark-surface via-transparent to-transparent" />
+              </div>
+
+              {/* Contenido */}
+              <div className="p-6 md:p-8 -mt-12 relative">
+                {/* Categoría */}
+                <span className="inline-block px-3 py-1 rounded-full bg-brand/20 text-brand text-xs font-bold uppercase mb-4">
+                  {noticiaSeleccionada.categoria || 'General'}
+                </span>
+
+                {/* Título */}
+                <h2 className="text-2xl md:text-4xl font-bold text-white leading-tight mb-4">
+                  {noticiaSeleccionada.titulo}
+                </h2>
+
+                {/* Metadata */}
+                <div className="flex flex-wrap items-center gap-4 text-sm text-text-secondary mb-6 pb-6 border-b border-dark-border">
+                  <span className="flex items-center gap-2">
+                    <UserIcon className="w-4 h-4 text-brand" />
+                    {noticiaSeleccionada.autor || 'Redacción'}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-brand" />
+                    {formatFecha(noticiaSeleccionada.fecha)}
+                  </span>
+                </div>
+
+                {/* Resumen Completo */}
+                <div className="prose prose-invert max-w-none">
+                  <p className="text-lg text-text-secondary leading-relaxed whitespace-pre-wrap">
+                    {noticiaSeleccionada.resumen}
+                  </p>
+                </div>
+
+                {/* Botón de Cierre inferior */}
+                <div className="mt-8 pt-6 border-t border-dark-border flex justify-end">
+                  <button
+                    onClick={() => setNoticiaSeleccionada(null)}
+                    className="px-6 py-2.5 rounded-lg bg-brand hover:bg-brand-light text-white font-semibold transition-colors"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        ) : (
-          <p className="text-text-secondary text-center py-8">No hay más noticias para mostrar.</p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
