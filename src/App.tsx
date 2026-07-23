@@ -23,6 +23,7 @@ import { DJsPage } from './modules/dashboard/pages/DJsPage';
 import { ProgramasPage } from './modules/dashboard/pages/ProgramasPage';
 import { LoginPage } from './modules/auth/pages/LoginPage';
 import { ProtectedRoute } from './shared/components/ProtectedRoute';
+import { NoticiasPodcastsPage } from './modules/dashboard/pages/NoticiasPodcastsPage';
 const Placeholder = ({ title }: { title: string }) => (
   <div className="flex items-center justify-center min-h-[60vh]">
     <div className="text-center space-y-4">
@@ -76,7 +77,7 @@ function App() {
         <Route path="usuarios" element={<Placeholder title="Usuarios y Roles" />} />
         <Route path="djs" element={<DJsPage />} />
         <Route path="programacion" element={<ProgramasPage />} />
-        <Route path="contenido" element={<Placeholder title="Noticias y Podcasts" />} />
+        <Route path="contenido" element={<NoticiasPodcastsPage />} />
         <Route path="streaming" element={<Placeholder title="Control de Streaming" />} />
         <Route path="publicidad" element={<Placeholder title="Publicidad" />} />
         <Route path="analiticas" element={<Placeholder title="Analíticas" />} />

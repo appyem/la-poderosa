@@ -32,6 +32,7 @@ export const RadioPage = () => {
   const [newMessage, setNewMessage] = useState('');
   const [userName, setUserName] = useState('');
   const [showChatInput, setShowChatInput] = useState(false);
+  const [nameConfirmed, setNameConfirmed] = useState(false);
   const [loading, setLoading] = useState(true);
   
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -125,15 +126,23 @@ export const RadioPage = () => {
 
   const togglePlay = () => setIsPlaying(!isPlaying);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
+    const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !userName.trim()) return;
+    if (!newMessage.trim()) return;
+
+    // Si el usuario no escribió nombre, usamos "Anónimo" por defecto
+    const finalUserName = userName.trim() || 'Anónimo';
+    if (!userName.trim()) {
+      setUserName(finalUserName);
+    }
+    
+    // ✅ Marcamos como confirmado para que el input de nombre desaparezca después de enviar
+    setNameConfirmed(true);
 
     try {
-      await addChatMessage(userName.trim(), newMessage.trim());
+      await addChatMessage(finalUserName, newMessage.trim());
       setNewMessage('');
       
-      // ✅ Scroll al final SOLO cuando el usuario envía un mensaje nuevo
       setTimeout(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 300);
@@ -347,9 +356,12 @@ export const RadioPage = () => {
             <div ref={chatEndRef} />
           </div>
           
-          {!showChatInput ? (
+                    {!showChatInput ? (
             <button 
-              onClick={() => setShowChatInput(true)}
+              onClick={() => {
+                setShowChatInput(true);
+                if (!userName) setNameConfirmed(false);
+              }}
               className="w-full py-2 rounded-lg bg-dark-elevated hover:bg-dark-surface transition-colors flex items-center justify-center gap-2 text-sm font-medium"
             >
               <MessageCircle className="w-4 h-4" />
@@ -357,7 +369,7 @@ export const RadioPage = () => {
             </button>
           ) : (
             <form onSubmit={handleSendMessage} className="space-y-2">
-              {!userName && (
+              {!nameConfirmed && (
                 <input
                   type="text"
                   value={userName}
