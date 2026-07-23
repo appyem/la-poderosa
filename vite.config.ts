@@ -6,7 +6,6 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // 🚨 CRÍTICO 1: Fuerza la actualización automática en segundo plano sin pedir permiso al usuario
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'logo.jpg', 'robots.txt', 'apple-touch-icon.png'],
       manifest: {
@@ -33,10 +32,11 @@ export default defineConfig({
         ]
       },
       workbox: {
-        // 🚨 CRÍTICO 2: Elimina automáticamente las cachés antiguas y rotas de versiones anteriores
         cleanupOutdatedCaches: true,
-        // Asegura que se cacheen todos los archivos necesarios de la nueva versión
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,jpg}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,jpg}'],
+        // 🚨 SOLUCIÓN: Aumentar el límite a 10 MB para permitir el logo.jpg actual
+        // (Ver recomendación importante abajo)
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024 
       }
     })
   ]
