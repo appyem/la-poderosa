@@ -26,7 +26,6 @@ export const NewsPage = () => {
     cargarNoticias();
   }, []);
 
-  // Cerrar modal con tecla ESC
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setNoticiaSeleccionada(null);
@@ -51,7 +50,6 @@ export const NewsPage = () => {
     });
   };
 
-  // Filtrar noticias por búsqueda
   const noticiasFiltradas = noticias.filter(n =>
     n.titulo.toLowerCase().includes(busqueda.toLowerCase()) ||
     n.resumen.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -82,7 +80,7 @@ export const NewsPage = () => {
             type="text"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar noticias por título, categoría o contenido..."
+            placeholder="Buscar noticias..."
             className="w-full pl-10 pr-4 py-3 rounded-xl bg-dark-surface border border-dark-border text-white focus:border-brand focus:outline-none transition-colors"
           />
         </div>
@@ -108,29 +106,31 @@ export const NewsPage = () => {
                   alt={featuredNews.titulo}
                   className="w-full h-64 md:h-80 object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-dark-surface via-dark-surface/50 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-dark-surface via-dark-surface/60 to-transparent" />
                 <div className="absolute top-4 left-4">
                   <span className="px-3 py-1.5 rounded-full bg-brand/90 text-white text-xs font-bold uppercase backdrop-blur-sm">
-                    ⭐ Destacada • {featuredNews.categoria || 'General'}
+                    ⭐ Destacada
                   </span>
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <h2 className="text-2xl md:text-3xl font-bold text-white mb-2 group-hover:text-brand transition-colors">
+                <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6">
+                  {/* ✅ CORREGIDO: text-xl en móvil, leading-snug para evitar superposición */}
+                  <h2 className="text-xl md:text-3xl font-bold text-white mb-2 leading-snug group-hover:text-brand transition-colors">
                     {featuredNews.titulo}
                   </h2>
-                  <p className="text-text-secondary line-clamp-2 max-w-3xl">
+                  {/* ✅ CORREGIDO: text-sm en móvil, md:text-base en desktop */}
+                  <p className="text-sm md:text-base text-text-secondary line-clamp-2 md:line-clamp-3">
                     {featuredNews.resumen}
                   </p>
-                  <div className="flex items-center gap-4 mt-3 text-sm text-text-muted">
+                  <div className="flex flex-wrap items-center gap-3 md:gap-4 mt-3 text-xs md:text-sm text-text-muted">
                     <span className="flex items-center gap-1">
-                      <UserIcon className="w-4 h-4" />
+                      <UserIcon className="w-3 h-3 md:w-4 md:h-4" />
                       {featuredNews.autor || 'Redacción'}
                     </span>
                     <span className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
+                      <Calendar className="w-3 h-3 md:w-4 md:h-4" />
                       {formatFecha(featuredNews.fecha)}
                     </span>
-                    <span className="text-brand font-medium ml-auto">
+                    <span className="text-brand font-medium ml-auto hidden md:inline">
                       Leer noticia completa →
                     </span>
                   </div>
@@ -143,7 +143,7 @@ export const NewsPage = () => {
           {otherNews.length > 0 && (
             <div className="space-y-4">
               <h2 className="text-xl font-bold text-white">Más recientes</h2>
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid sm:grid-cols-2 gap-4">
                 {otherNews.map((noticia) => (
                   <article
                     key={noticia.id}
@@ -157,19 +157,21 @@ export const NewsPage = () => {
                         className="w-full h-44 object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute top-3 left-3">
-                        <span className="px-2 py-1 rounded bg-brand/90 text-white text-xs font-bold uppercase backdrop-blur-sm">
+                        <span className="px-2 py-1 rounded bg-brand/90 text-white text-[10px] md:text-xs font-bold uppercase backdrop-blur-sm">
                           {noticia.categoria || 'General'}
                         </span>
                       </div>
                     </div>
-                    <div className="p-5">
-                      <h3 className="text-lg font-bold text-white mb-2 line-clamp-2 group-hover:text-brand transition-colors">
+                    <div className="p-4 md:p-5">
+                      {/* ✅ CORREGIDO: text-base en móvil para títulos de cards */}
+                      <h3 className="text-base md:text-lg font-bold text-white mb-2 line-clamp-2 leading-snug group-hover:text-brand transition-colors">
                         {noticia.titulo}
                       </h3>
+                      {/* ✅ CORREGIDO: text-sm explícito */}
                       <p className="text-sm text-text-secondary line-clamp-2">
                         {noticia.resumen}
                       </p>
-                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-dark-border">
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-dark-border">
                         <span className="text-xs text-text-muted flex items-center gap-1">
                           <UserIcon className="w-3 h-3" />
                           {noticia.autor || 'Redacción'}
@@ -193,15 +195,12 @@ export const NewsPage = () => {
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in"
           onClick={() => setNoticiaSeleccionada(null)}
         >
-          {/* Backdrop oscuro con blur */}
           <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
 
-          {/* Contenido del Modal */}
           <div
             className="relative w-full max-w-4xl max-h-[90vh] bg-dark-surface border border-dark-border rounded-2xl overflow-hidden shadow-2xl animate-scale-in flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Botón de Cerrar */}
             <button
               onClick={() => setNoticiaSeleccionada(null)}
               className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-sm transition-colors"
@@ -210,9 +209,7 @@ export const NewsPage = () => {
               <X className="w-5 h-5" />
             </button>
 
-            {/* Scroll interno */}
             <div className="overflow-y-auto">
-              {/* Imagen Grande */}
               <div className="relative w-full aspect-[16/9] bg-black">
                 <img
                   src={noticiaSeleccionada.imagenUrl}
@@ -222,20 +219,17 @@ export const NewsPage = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-dark-surface via-transparent to-transparent" />
               </div>
 
-              {/* Contenido */}
-              <div className="p-6 md:p-8 -mt-12 relative">
-                {/* Categoría */}
-                <span className="inline-block px-3 py-1 rounded-full bg-brand/20 text-brand text-xs font-bold uppercase mb-4">
+              <div className="p-5 md:p-8 -mt-8 md:-mt-12 relative">
+                <span className="inline-block px-3 py-1 rounded-full bg-brand/20 text-brand text-xs font-bold uppercase mb-3 md:mb-4">
                   {noticiaSeleccionada.categoria || 'General'}
                 </span>
 
-                {/* Título */}
-                <h2 className="text-2xl md:text-4xl font-bold text-white leading-tight mb-4">
+                {/* ✅ CORREGIDO: leading-snug en móvil para evitar superposición de títulos largos */}
+                <h2 className="text-2xl md:text-4xl font-bold text-white leading-snug mb-4">
                   {noticiaSeleccionada.titulo}
                 </h2>
 
-                {/* Metadata */}
-                <div className="flex flex-wrap items-center gap-4 text-sm text-text-secondary mb-6 pb-6 border-b border-dark-border">
+                <div className="flex flex-wrap items-center gap-3 md:gap-4 text-xs md:text-sm text-text-secondary mb-5 md:mb-6 pb-5 md:pb-6 border-b border-dark-border">
                   <span className="flex items-center gap-2">
                     <UserIcon className="w-4 h-4 text-brand" />
                     {noticiaSeleccionada.autor || 'Redacción'}
@@ -246,18 +240,17 @@ export const NewsPage = () => {
                   </span>
                 </div>
 
-                {/* Resumen Completo */}
+                {/* ✅ CORREGIDO: text-base en móvil, md:text-lg en desktop */}
                 <div className="prose prose-invert max-w-none">
-                  <p className="text-lg text-text-secondary leading-relaxed whitespace-pre-wrap">
+                  <p className="text-base md:text-lg text-text-secondary leading-relaxed whitespace-pre-wrap">
                     {noticiaSeleccionada.resumen}
                   </p>
                 </div>
 
-                {/* Botón de Cierre inferior */}
-                <div className="mt-8 pt-6 border-t border-dark-border flex justify-end">
+                <div className="mt-6 md:mt-8 pt-5 md:pt-6 border-t border-dark-border flex justify-end">
                   <button
                     onClick={() => setNoticiaSeleccionada(null)}
-                    className="px-6 py-2.5 rounded-lg bg-brand hover:bg-brand-light text-white font-semibold transition-colors"
+                    className="px-6 py-2.5 rounded-lg bg-brand hover:bg-brand-light text-white font-semibold transition-colors text-sm md:text-base"
                   >
                     Cerrar
                   </button>
