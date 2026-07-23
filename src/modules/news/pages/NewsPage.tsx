@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Loader2, X, Calendar, User as UserIcon } from 'lucide-react';
+import { Search, Loader2, X, Calendar, User as UserIcon, Share2 } from 'lucide-react';
 import { getNoticiasDelDia, type Noticia } from '../../../core/firebase/services';
 import { Timestamp } from 'firebase/firestore';
 
@@ -48,6 +48,16 @@ export const NewsPage = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  // ✅ FUNCIÓN PARA COMPARTIR EN WHATSAPP NATIVO
+  const handleCompartirWhatsApp = (noticia: Noticia) => {
+    const url = `${window.location.origin}/noticias`;
+    const mensaje = `¡Hola! 👋 Te invito a leer esta noticia importante de *LA PODEROSA*:\n\n📰 *${noticia.titulo}*\n\n🔗 Entra aquí para leerla completa: ${url}\n\n📲 ¡Descarga nuestra aplicación para no perderte nada!`;
+    
+    // Este enlace fuerza la apertura de la app nativa de WhatsApp en móviles
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   const noticiasFiltradas = noticias.filter(n =>
@@ -113,11 +123,9 @@ export const NewsPage = () => {
                   </span>
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6">
-                  {/* ✅ CORREGIDO: text-xl en móvil, leading-snug para evitar superposición */}
                   <h2 className="text-xl md:text-3xl font-bold text-white mb-2 leading-snug group-hover:text-brand transition-colors">
                     {featuredNews.titulo}
                   </h2>
-                  {/* ✅ CORREGIDO: text-sm en móvil, md:text-base en desktop */}
                   <p className="text-sm md:text-base text-text-secondary line-clamp-2 md:line-clamp-3">
                     {featuredNews.resumen}
                   </p>
@@ -163,11 +171,9 @@ export const NewsPage = () => {
                       </div>
                     </div>
                     <div className="p-4 md:p-5">
-                      {/* ✅ CORREGIDO: text-base en móvil para títulos de cards */}
                       <h3 className="text-base md:text-lg font-bold text-white mb-2 line-clamp-2 leading-snug group-hover:text-brand transition-colors">
                         {noticia.titulo}
                       </h3>
-                      {/* ✅ CORREGIDO: text-sm explícito */}
                       <p className="text-sm text-text-secondary line-clamp-2">
                         {noticia.resumen}
                       </p>
@@ -224,7 +230,6 @@ export const NewsPage = () => {
                   {noticiaSeleccionada.categoria || 'General'}
                 </span>
 
-                {/* ✅ CORREGIDO: leading-snug en móvil para evitar superposición de títulos largos */}
                 <h2 className="text-2xl md:text-4xl font-bold text-white leading-snug mb-4">
                   {noticiaSeleccionada.titulo}
                 </h2>
@@ -240,17 +245,24 @@ export const NewsPage = () => {
                   </span>
                 </div>
 
-                {/* ✅ CORREGIDO: text-base en móvil, md:text-lg en desktop */}
                 <div className="prose prose-invert max-w-none">
                   <p className="text-base md:text-lg text-text-secondary leading-relaxed whitespace-pre-wrap">
                     {noticiaSeleccionada.resumen}
                   </p>
                 </div>
 
-                <div className="mt-6 md:mt-8 pt-5 md:pt-6 border-t border-dark-border flex justify-end">
+                {/* ✅ BOTONES DE ACCIÓN (WhatsApp y Cerrar) */}
+                <div className="mt-6 md:mt-8 pt-5 md:pt-6 border-t border-dark-border flex flex-col sm:flex-row gap-3 justify-end">
+                  <button
+                    onClick={() => handleCompartirWhatsApp(noticiaSeleccionada)}
+                    className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors text-sm md:text-base"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Compartir en WhatsApp
+                  </button>
                   <button
                     onClick={() => setNoticiaSeleccionada(null)}
-                    className="px-6 py-2.5 rounded-lg bg-brand hover:bg-brand-light text-white font-semibold transition-colors text-sm md:text-base"
+                    className="px-6 py-2.5 rounded-lg bg-dark-elevated hover:bg-dark-border text-white font-semibold transition-colors text-sm md:text-base"
                   >
                     Cerrar
                   </button>

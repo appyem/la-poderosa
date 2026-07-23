@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Newspaper, Loader2, X, Calendar, User as UserIcon } from 'lucide-react';
+import { Newspaper, Loader2, X, Calendar, User as UserIcon, Share2 } from 'lucide-react';
 import { getNoticiasDelDia, type Noticia } from '../../../core/firebase/services';
 
 export const NewsSection = () => {
@@ -42,6 +42,16 @@ export const NewsSection = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  // ✅ FUNCIÓN PARA COMPARTIR EN WHATSAPP NATIVO
+  const handleCompartirWhatsApp = (noticia: Noticia) => {
+    const url = `${window.location.origin}/noticias`;
+    const mensaje = `¡Hola! 👋 Te invito a leer esta noticia importante de *LA PODEROSA*:\n\n📰 *${noticia.titulo}*\n\n🔗 Entra aquí para leerla completa: ${url}\n\n📲 ¡Descarga nuestra aplicación para no perderte nada!`;
+    
+    // Este enlace fuerza la apertura de la app nativa de WhatsApp en móviles
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   if (loading) {
@@ -171,11 +181,18 @@ export const NewsSection = () => {
                   </p>
                 </div>
 
-                {/* Botón de Cierre inferior (móvil) */}
-                <div className="mt-8 pt-6 border-t border-dark-border flex justify-end">
+                {/* ✅ BOTONES DE ACCIÓN (WhatsApp y Cerrar) */}
+                <div className="mt-8 pt-6 border-t border-dark-border flex flex-col sm:flex-row gap-3 justify-end">
+                  <button
+                    onClick={() => handleCompartirWhatsApp(noticiaSeleccionada)}
+                    className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors text-sm md:text-base"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Compartir en WhatsApp
+                  </button>
                   <button
                     onClick={() => setNoticiaSeleccionada(null)}
-                    className="px-6 py-2.5 rounded-lg bg-brand hover:bg-brand-light text-white font-semibold transition-colors"
+                    className="px-6 py-2.5 rounded-lg bg-dark-elevated hover:bg-dark-border text-white font-semibold transition-colors text-sm md:text-base"
                   >
                     Cerrar
                   </button>
