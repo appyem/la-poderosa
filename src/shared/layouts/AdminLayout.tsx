@@ -4,10 +4,22 @@ import {
   LayoutDashboard, Users, User, Radio, Calendar, Newspaper, 
   Megaphone, BarChart3, Settings, LogOut, ChevronDown, Building2, Bot 
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { logout } from '../../core/firebase/services';
 
 export const AdminLayout = () => {
   const [tenantOpen, setTenantOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
+  };
   
   const menuItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Resumen' },
@@ -21,6 +33,9 @@ export const AdminLayout = () => {
     { to: '/dashboard/ia', icon: Bot, label: 'Herramientas IA' },
     { to: '/dashboard/configuracion', icon: Settings, label: 'Configuración' },
   ];
+
+
+  
 
   return (
     <div className="min-h-screen bg-dark-bg text-text-primary flex">
@@ -53,10 +68,13 @@ export const AdminLayout = () => {
           ))}
         </nav>
         <div className="p-4 border-t border-dark-border">
-          <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors w-full">
-            <LogOut className="w-5 h-5" />
-            Cerrar Sesión
-          </button>
+          <button 
+  onClick={handleLogout}
+  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors w-full"
+>
+  <LogOut className="w-5 h-5" />
+  Cerrar Sesión
+</button>
         </div>
       </aside>
       <div className="flex-1 md:ml-64 flex flex-col min-h-screen">

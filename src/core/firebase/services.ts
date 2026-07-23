@@ -11,6 +11,14 @@ import {
 } from 'firebase/firestore';
 import { db } from './config';
 import type { Program, News, Tenant } from '../types/models';
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged, 
+   
+} from 'firebase/auth';
+import type { User } from 'firebase/auth';
 
 const TENANT_ID = 'la-poderosa-4b6ab'; 
 
@@ -167,4 +175,25 @@ export const getChatMessages = async (maxMessages: number = 50): Promise<ChatMes
     .filter(msg => msg.timestamp.toMillis() >= twentyFourHoursAgo)
     .sort((a, b) => a.timestamp.toMillis() - b.timestamp.toMillis())
     .slice(-maxMessages);
+};
+// ==========================================
+// FUNCIONES DE AUTENTICACIÓN
+// ==========================================
+const auth = getAuth();
+
+export const login = async (email: string, password: string) => {
+  await signInWithEmailAndPassword(auth, email, password);
+};
+
+export const logout = async () => {
+  await signOut(auth);
+};
+
+export const getCurrentUser = (): Promise<User | null> => {
+  return new Promise((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe();
+      resolve(user);
+    });
+  });
 };
