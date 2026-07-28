@@ -8,21 +8,20 @@ import {
   deleteDoc, 
   doc, 
   Timestamp,
-  updateDoc 
+  updateDoc,
+  getDoc,
+  setDoc
 } from 'firebase/firestore';
-import { getDoc, setDoc } from 'firebase/firestore';
-import { db } from './config';
+import { db, storage } from './config';
 import type { Program, News, Tenant } from '../types/models';
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
   signOut, 
-  onAuthStateChanged, 
-   
+  onAuthStateChanged 
 } from 'firebase/auth';
 import type { User } from 'firebase/auth';
-
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const TENANT_ID = 'la-poderosa-4b6ab'; 
 
@@ -162,24 +161,18 @@ export const addChatMessage = async (usuario: string, mensaje: string) => {
 };
 
 export const getChatMessages = async (maxMessages: number = 50): Promise<ChatMessage[]> => {
-  const q = query(
-    collection(db, 'chat'), 
-    where('tenantId', '==', TENANT_ID)
-  );
+  const q = query(collection(db, 'chat'), where('tenantId', '==', TENANT_ID));
   const snapshot = await getDocs(q);
   const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
   
-  // Calcular la marca de tiempo de hace exactamente 24 horas
   const twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000);
   
-  // 1. Filtrar: Solo conservar mensajes de las últimas 24 horas (se reinicia a medianoche automáticamente)
-  // 2. Ordenar: Cronológicamente (del más antiguo al más reciente de ese periodo)
-  // 3. Limitar: Mostrar solo los últimos 'maxMessages' para no saturar la vista
   return messages
     .filter(msg => msg.timestamp.toMillis() >= twentyFourHoursAgo)
     .sort((a, b) => a.timestamp.toMillis() - b.timestamp.toMillis())
     .slice(-maxMessages);
 };
+
 // ==========================================
 // FUNCIONES DE AUTENTICACIÓN
 // ==========================================
@@ -202,7 +195,6 @@ export const getCurrentUser = (): Promise<User | null> => {
   });
 };
 
-
 // ==========================================
 // TIPOS Y FUNCIONES PARA NOTICIAS Y PODCASTS
 // ==========================================
@@ -212,8 +204,8 @@ export interface Noticia {
   resumen: string;
   autor: string;
   categoria: string;
-  imagenUrl: string; // URL de la imagen subida a Firebase Storage
-  fecha: Timestamp;  // Fecha de publicación (se usa para filtrar las 24h)
+  imagenUrl: string;
+  fecha: Timestamp;
   tenantId: string;
 }
 
@@ -221,29 +213,26 @@ export interface Podcast {
   id: string;
   titulo: string;
   youtubeUrl: string;
-  youtubeVideoId: string; // ID extraído para obtener la imagen de previsualización
+  youtubeVideoId: string;
   categoria: string;
+  imagenUrl: string; // ✅ NUEVO: Imagen personalizada del podcast
   tenantId: string;
   createdAt: Timestamp;
 }
 
-// Función auxiliar: Extrae el ID del video de YouTube desde la URL
-// Ejemplo: "https://www.youtube.com/watch?v=ABC123" → "ABC123"
 export const extraerVideoIdDeYoutube = (url: string): string => {
   const regex = /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/;
   const match = url.match(regex);
   return match ? match[1] : '';
 };
 
-// Función auxiliar: Obtiene la URL de la imagen de previsualización de YouTube
-// Ejemplo: "ABC123" → "https://img.youtube.com/vi/ABC123/maxresdefault.jpg"
 export const obtenerImagenPrevisualizacionYoutube = (videoId: string): string => {
   if (!videoId) return '';
   return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
 };
 
 // ==========================================
-// FUNCIONES PARA NOTICIAS (Se filtran por día)
+// FUNCIONES PARA NOTICIAS
 // ==========================================
 export const addNoticia = async (noticiaData: Omit<Noticia, 'id' | 'tenantId' | 'fecha'>) => {
   const docRef = await addDoc(collection(db, 'noticias'), {
@@ -255,18 +244,16 @@ export const addNoticia = async (noticiaData: Omit<Noticia, 'id' | 'tenantId' | 
 };
 
 export const getNoticiasDelDia = async (): Promise<Noticia[]> => {
-  // 1. Traemos todas las noticias del tenant
   const q = query(collection(db, 'noticias'), where('tenantId', '==', TENANT_ID));
   const snapshot = await getDocs(q);
   const noticias = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Noticia));
   
-  // 2. Filtramos en el cliente: solo noticias de hoy (desde las 00:00:00 de hoy)
   const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0); // Inicio del día actual
+  hoy.setHours(0, 0, 0, 0);
   
   return noticias
     .filter(n => n.fecha.toMillis() >= hoy.getTime())
-    .sort((a, b) => b.fecha.toMillis() - a.fecha.toMillis()); // Más recientes primero
+    .sort((a, b) => b.fecha.toMillis() - a.fecha.toMillis());
 };
 
 export const deleteNoticia = async (noticiaId: string) => {
@@ -274,10 +261,9 @@ export const deleteNoticia = async (noticiaId: string) => {
 };
 
 // ==========================================
-// FUNCIONES PARA PODCASTS (Permanentes)
+// FUNCIONES PARA PODCASTS
 // ==========================================
-export const addPodcast = async (podcastData: { titulo: string; youtubeUrl: string; categoria: string }) => {
-  // Extraemos el ID del video automáticamente antes de guardar
+export const addPodcast = async (podcastData: { titulo: string; youtubeUrl: string; categoria: string; imagenUrl: string }) => {
   const youtubeVideoId = extraerVideoIdDeYoutube(podcastData.youtubeUrl);
   
   const docRef = await addDoc(collection(db, 'podcasts'), {
@@ -285,6 +271,7 @@ export const addPodcast = async (podcastData: { titulo: string; youtubeUrl: stri
     youtubeUrl: podcastData.youtubeUrl,
     youtubeVideoId: youtubeVideoId,
     categoria: podcastData.categoria,
+    imagenUrl: podcastData.imagenUrl, // ✅ Guardamos la imagen personalizada
     tenantId: TENANT_ID,
     createdAt: Timestamp.now()
   });
@@ -295,8 +282,6 @@ export const getPodcasts = async (): Promise<Podcast[]> => {
   const q = query(collection(db, 'podcasts'), where('tenantId', '==', TENANT_ID));
   const snapshot = await getDocs(q);
   const podcasts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Podcast));
-  
-  // Ordenamos en el cliente por fecha de creación (más recientes primero)
   return podcasts.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
 };
 
@@ -304,27 +289,27 @@ export const deletePodcast = async (podcastId: string) => {
   await deleteDoc(doc(db, 'podcasts', podcastId));
 };
 
-
 // ==========================================
 // FUNCIONES PARA FIREBASE STORAGE (Imágenes)
 // ==========================================
-const storage = getStorage();
-
 export const uploadImagenNoticia = async (archivo: File): Promise<string> => {
-  // Creamos un nombre único para el archivo usando la fecha actual
   const nombreArchivo = `noticias/${Date.now()}_${archivo.name}`;
   const storageRef = ref(storage, nombreArchivo);
-  
-  // Subimos el archivo
   const snapshot = await uploadBytes(storageRef, archivo);
-  
-  // Obtenemos y retornamos la URL pública de descarga
+  const urlDescarga = await getDownloadURL(snapshot.ref);
+  return urlDescarga;
+};
+
+export const uploadImagenPodcast = async (archivo: File): Promise<string> => {
+  const nombreArchivo = `podcasts/${Date.now()}_${archivo.name}`;
+  const storageRef = ref(storage, nombreArchivo);
+  const snapshot = await uploadBytes(storageRef, archivo);
   const urlDescarga = await getDownloadURL(snapshot.ref);
   return urlDescarga;
 };
 
 // ==========================================
-// FUNCIONES PARA CONFIGURACIÓN DE TV (YOUTUBE)
+// FUNCIONES PARA CONFIGURACIÓN DE TV
 // ==========================================
 export const getTvConfig = async (): Promise<string> => {
   try {
@@ -376,8 +361,6 @@ export const getAnuncios = async (): Promise<Anuncio[]> => {
   const q = query(collection(db, 'anuncios'), where('tenantId', '==', TENANT_ID));
   const snapshot = await getDocs(q);
   const anuncios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Anuncio));
-  
-  // Filtrar solo los activos y ordenar por fecha de creación (más recientes primero)
   return anuncios
     .filter(a => a.activo)
     .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());

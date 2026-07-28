@@ -9,7 +9,7 @@ import {
   addPodcast, 
   getPodcasts, 
   deletePodcast, 
-  obtenerImagenPrevisualizacionYoutube,
+  uploadImagenPodcast,
   type Noticia, 
   type Podcast 
 } from '../../../core/firebase/services';
@@ -30,8 +30,9 @@ export const NoticiasPodcastsPage = () => {
   // Estados para Podcasts
   const [podcasts, setPodcasts] = useState<Podcast[]>([]);
   const [nuevoPodcast, setNuevoPodcast] = useState({ titulo: '', youtubeUrl: '', categoria: '' });
+  const [podcastImageFile, setPodcastImageFile] = useState<File | null>(null);
+  const [podcastImagePreview, setPodcastImagePreview] = useState<string>('');
 
-  // ✅ CORREGIDO: Función declarada ANTES de ser usada en useEffect
   const cargarDatos = async () => {
     setLoadingData(true);
     try {
@@ -111,22 +112,40 @@ export const NoticiasPodcastsPage = () => {
   };
 
   // --- Lógica de Podcasts ---
+  const handlePodcastImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setPodcastImageFile(e.target.files[0]);
+      setPodcastImagePreview(URL.createObjectURL(e.target.files[0]));
+    }
+  };
+
   const handleSubmitPodcast = async (e: FormEvent) => {
     e.preventDefault();
-    if (!nuevoPodcast.titulo.trim() || !nuevoPodcast.youtubeUrl.trim()) {
-      mostrarMensaje('error', 'El título y la URL de YouTube son obligatorios.');
+    if (!nuevoPodcast.titulo.trim() || !nuevoPodcast.youtubeUrl.trim() || !podcastImageFile) {
+      mostrarMensaje('error', 'El título, la URL de YouTube y la imagen son obligatorios.');
       return;
     }
 
     try {
       setSaving(true);
-      await addPodcast(nuevoPodcast);
+      const imagenUrl = await uploadImagenPodcast(podcastImageFile);
+      
+      await addPodcast({
+        ...nuevoPodcast,
+        imagenUrl: imagenUrl
+      });
+      
       setNuevoPodcast({ titulo: '', youtubeUrl: '', categoria: '' });
+      setPodcastImageFile(null);
+      setPodcastImagePreview('');
+      const inputImagen = document.getElementById('podcast-imagen-input') as HTMLInputElement;
+      if (inputImagen) inputImagen.value = '';
+      
       await cargarDatos();
       mostrarMensaje('success', 'Podcast agregado exitosamente.');
     } catch (error) {
       console.error('Error al agregar podcast:', error);
-      mostrarMensaje('error', 'Error al agregar el podcast. Verifique la URL de YouTube.');
+      mostrarMensaje('error', 'Error al agregar el podcast.');
     } finally {
       setSaving(false);
     }
@@ -196,7 +215,6 @@ export const NoticiasPodcastsPage = () => {
           {/* ================= SECCIÓN NOTICIAS ================= */}
           {activeTab === 'noticias' && (
             <div className="grid lg:grid-cols-3 gap-6">
-              {/* Formulario Noticias */}
               <div className="lg:col-span-1">
                 <div className="p-6 rounded-xl bg-dark-surface border border-dark-border sticky top-6">
                   <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
@@ -277,7 +295,6 @@ export const NoticiasPodcastsPage = () => {
                 </div>
               </div>
 
-              {/* Lista Noticias */}
               <div className="lg:col-span-2">
                 <div className="p-6 rounded-xl bg-dark-surface border border-dark-border">
                   <h2 className="text-lg font-bold mb-4">Noticias Publicadas Hoy</h2>
@@ -320,7 +337,6 @@ export const NoticiasPodcastsPage = () => {
           {/* ================= SECCIÓN PODCASTS ================= */}
           {activeTab === 'podcasts' && (
             <div className="grid lg:grid-cols-3 gap-6">
-              {/* Formulario Podcasts */}
               <div className="lg:col-span-1">
                 <div className="p-6 rounded-xl bg-dark-surface border border-dark-border sticky top-6">
                   <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
@@ -359,6 +375,34 @@ export const NoticiasPodcastsPage = () => {
                         disabled={saving}
                       />
                     </div>
+                    
+                    {/* Campo de Imagen del Podcast */}
+                    <div>
+                      <label className="block text-sm font-medium text-text-secondary mb-2">Imagen del Podcast *</label>
+                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-dark-border rounded-lg cursor-pointer bg-dark-bg hover:bg-dark-elevated transition-colors">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          {podcastImagePreview ? (
+                            <img src={podcastImagePreview} alt="Vista previa" className="h-full object-contain rounded" />
+                          ) : (
+                            <>
+                              <ImageIcon className="w-8 h-8 text-text-muted mb-2" />
+                              <p className="text-xs text-text-secondary text-center px-4">
+                                Clic para seleccionar imagen
+                              </p>
+                            </>
+                          )}
+                        </div>
+                        <input 
+                          id="podcast-imagen-input"
+                          type="file" 
+                          className="hidden" 
+                          accept="image/*" 
+                          onChange={handlePodcastImageChange}
+                          disabled={saving}
+                        />
+                      </label>
+                    </div>
+
                     <button
                       type="submit"
                       disabled={saving}
@@ -371,7 +415,6 @@ export const NoticiasPodcastsPage = () => {
                 </div>
               </div>
 
-              {/* Lista Podcasts */}
               <div className="lg:col-span-2">
                 <div className="p-6 rounded-xl bg-dark-surface border border-dark-border">
                   <h2 className="text-lg font-bold mb-4">Podcasts Registrados</h2>
@@ -391,7 +434,7 @@ export const NoticiasPodcastsPage = () => {
                             className="block aspect-video bg-black"
                           >
                             <img 
-                              src={obtenerImagenPrevisualizacionYoutube(podcast.youtubeVideoId)} 
+                              src={podcast.imagenUrl} 
                               alt={podcast.titulo}
                               className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                               onError={(e) => {
