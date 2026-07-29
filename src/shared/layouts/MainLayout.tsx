@@ -65,9 +65,11 @@ export const MainLayout = () => {
     ? 'from-black/20 via-black/40 to-black/60' 
     : 'from-black/60 via-black/80 to-black/90');
 
+  // ✅ BARRA INFERIOR MÓVIL ACTUALIZADA: Ahora incluye Servicios (5 elementos)
   const mainNav = [
     { to: '/', icon: Home, label: 'Inicio' },
     { to: '/emisora', icon: Radio, label: 'Emisora' },
+    { to: '/servicios', icon: Briefcase, label: 'Servicios' }, // ✅ AGREGADO AQUÍ
     { to: '/television', icon: Tv, label: 'TV' },
     { to: '/noticias', icon: Newspaper, label: 'Noticias' },
   ];
@@ -79,7 +81,7 @@ export const MainLayout = () => {
     { to: '/podcasts', icon: Mic2, label: 'Podcasts' },
     { to: '/noticias', icon: Newspaper, label: 'Noticias' },
     { to: '/programacion', icon: Calendar, label: 'Programación' },
-    { to: '/servicios', icon: Briefcase, label: 'Servicios' }, // ✅ CAMBIADO: Eventos -> Servicios
+    { to: '/servicios', icon: Briefcase, label: 'Servicios' },
     { to: '/galerias', icon: ImageIcon, label: 'Galerías' },
     { to: '/chat', icon: MessageCircle, label: 'Chat' },
     { to: '/comunidad', icon: Users, label: 'Comunidad' },
@@ -258,7 +260,7 @@ export const MainLayout = () => {
           </div>
         </div>
 
-        {/* Navegación Móvil Inferior */}
+        {/* Navegación Móvil Inferior (Ahora con 5 elementos) */}
         <nav className="fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-white/10 md:hidden h-16">
           <div className="flex justify-around items-center h-full">
             {mainNav.map((item) => (
