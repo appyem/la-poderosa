@@ -3,7 +3,7 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { 
   Home, Radio, Tv, Newspaper, Calendar, ImageIcon, 
   Mic2, MessageCircle, Users, Megaphone, Phone, LayoutDashboard, 
-  Menu, X, Search, Bell, Play, Pause, Volume2, VolumeX
+  Menu, X, Search, Bell, Play, Pause, Volume2, VolumeX, Briefcase
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
@@ -79,13 +79,12 @@ export const MainLayout = () => {
     { to: '/podcasts', icon: Mic2, label: 'Podcasts' },
     { to: '/noticias', icon: Newspaper, label: 'Noticias' },
     { to: '/programacion', icon: Calendar, label: 'Programación' },
-    { to: '/eventos', icon: Calendar, label: 'Eventos' },
+    { to: '/servicios', icon: Briefcase, label: 'Servicios' }, // ✅ CAMBIADO: Eventos -> Servicios
     { to: '/galerias', icon: ImageIcon, label: 'Galerías' },
     { to: '/chat', icon: MessageCircle, label: 'Chat' },
     { to: '/comunidad', icon: Users, label: 'Comunidad' },
     { to: '/publicidad', icon: Megaphone, label: 'Publicidad' },
     { to: '/contacto', icon: Phone, label: 'Contacto' },
-    // ✅ Panel Admin agregado al final de la lista principal
     { to: '/dashboard', icon: LayoutDashboard, label: 'Panel Admin', admin: true },
   ];
 
@@ -130,7 +129,7 @@ export const MainLayout = () => {
               
               <NavLink to="/" className="flex items-center gap-3">
                 <img 
-                  src="/logo.jpg" 
+                  src="/logo.png" 
                   alt="LA PODEROSA" 
                   className="h-16 w-16 rounded-full object-cover shadow-lg shadow-brand/20 border-2 border-brand/30" 
                 />

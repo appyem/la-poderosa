@@ -2,7 +2,7 @@ import { HeroSection } from '../components/HeroSection';
 import { LiveProgramsSection } from '../components/LiveProgramsSection';
 import { PodcastsSection } from '../components/PodcastsSection';
 import { NewsSection } from '../components/NewsSection';
-import { EventsSection } from '../components/EventsSection';
+import { EventsSection } from '../components/ServicesSection';
 import { SponsorsSection } from '../components/SponsorsSection';
 
 export const HomePage = () => {

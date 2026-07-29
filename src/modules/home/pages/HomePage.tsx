@@ -2,7 +2,7 @@ import { HeroSection } from '../components/HeroSection';
 import { LiveProgramsSection } from '../components/LiveProgramsSection';
 import { PodcastsSection } from '../components/PodcastsSection';
 import { NewsSection } from '../components/NewsSection';
-import { EventsSection } from '../components/EventsSection';
+import { ServicesSection } from '../components/ServicesSection'; // ✅ CORREGIDO
 import { SponsorsSection } from '../components/SponsorsSection';
 
 export const HomePage = () => {
@@ -12,7 +12,7 @@ export const HomePage = () => {
       <LiveProgramsSection />
       <PodcastsSection />
       <NewsSection />
-      <EventsSection />
+      <ServicesSection /> {/* ✅ CORREGIDO */}
       <SponsorsSection />
     </div>
   );

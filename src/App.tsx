@@ -11,8 +11,7 @@ import { PodcastDetailPage } from './modules/media/pages/PodcastDetailPage';
 import { NewsPage } from './modules/news/pages/NewsPage';
 import { NewsDetailPage } from './modules/news/pages/NewsDetailPage';
 import { SchedulePage } from './modules/schedule/pages/SchedulePage';
-import { EventsPage } from './modules/events/pages/EventsPage';
-import { EventDetailPage } from './modules/events/pages/EventDetailPage';
+import { ServicesPage } from './modules/events/pages/ServicesPage'; // ✅ CORRECTO
 import { GalleriesPage } from './modules/galleries/pages/GalleriesPage';
 import { AdsPage } from './modules/ads/pages/AdsPage';
 import { ContactPage } from './modules/contact/pages/ContactPage';
@@ -25,7 +24,7 @@ import { LoginPage } from './modules/auth/pages/LoginPage';
 import { ProtectedRoute } from './shared/components/ProtectedRoute';
 import { NoticiasPodcastsPage } from './modules/dashboard/pages/NoticiasPodcastsPage';
 import { StreamingPage } from './modules/dashboard/pages/StreamingPage';
-import { PublicidadPage } from './modules/dashboard/pages/PublicidadPage'; // ✅ IMPORTACIÓN AGREGADA
+import { PublicidadPage } from './modules/dashboard/pages/PublicidadPage';
 
 const Placeholder = ({ title }: { title: string }) => (
   <div className="flex items-center justify-center min-h-[60vh]">
@@ -54,8 +53,10 @@ function App() {
           <Route path="noticias" element={<NewsPage />} />
           <Route path="noticias/:id" element={<NewsDetailPage />} />
           <Route path="programacion" element={<SchedulePage />} />
-          <Route path="eventos" element={<EventsPage />} />
-          <Route path="eventos/:id" element={<EventDetailPage />} />
+          
+          {/* ✅ RUTA DE SERVICIOS CORREGIDA (Ya no es eventos) */}
+          <Route path="servicios" element={<ServicesPage />} />
+          
           <Route path="galerias" element={<GalleriesPage />} />
           <Route path="publicidad" element={<AdsPage />} />
           <Route path="contacto" element={<ContactPage />} />
@@ -82,7 +83,7 @@ function App() {
           <Route path="programacion" element={<ProgramasPage />} />
           <Route path="contenido" element={<NoticiasPodcastsPage />} />
           <Route path="streaming" element={<StreamingPage />} />
-          <Route path="publicidad" element={<PublicidadPage />} /> {/* ✅ RUTA CORREGIDA AQUÍ */}
+          <Route path="publicidad" element={<PublicidadPage />} />
           <Route path="analiticas" element={<Placeholder title="Analíticas" />} />
           <Route path="ia" element={<Placeholder title="Herramientas IA" />} />
           <Route path="configuracion" element={<Placeholder title="Configuración" />} />

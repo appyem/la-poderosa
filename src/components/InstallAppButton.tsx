@@ -54,14 +54,17 @@ export const InstallAppButton = () => {
 
   return (
     <>
+      {/* ✅ BOTÓN MEJORADO: Vertical en celular, horizontal en escritorio */}
       <button
-  onClick={handleInstallClick}
-  className="flex items-center gap-2 px-3 py-2 rounded-full bg-brand text-white font-bold shadow-lg hover:opacity-90 transition-all"
-  aria-label="Instalar aplicación"
->
-  <Download className="w-5 h-5" />
-  <span className="hidden md:inline">Instalar App</span>
-</button>
+        onClick={handleInstallClick}
+        className="flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 px-3 py-2 rounded-lg bg-brand text-white font-bold shadow-lg hover:opacity-90 transition-all active:scale-95"
+        aria-label="Instalar aplicación"
+      >
+        <Download className="w-5 h-5" />
+        <span className="text-[10px] md:text-sm uppercase tracking-wider md:tracking-normal leading-none text-center">
+          Descargar App
+        </span>
+      </button>
 
       {showIosInstructions && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
