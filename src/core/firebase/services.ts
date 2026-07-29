@@ -45,6 +45,7 @@ export interface ProgramaRadio {
   dias: string[];
   horaInicio: string;
   horaFin: string;
+  imagenUrl?: string; // ✅ NUEVO: Imagen personalizada del programa
   tenantId: string;
   createdAt: Timestamp;
 }
@@ -89,6 +90,11 @@ export const getProgramasRadio = async (): Promise<ProgramaRadio[]> => {
   const snapshot = await getDocs(q);
   const programas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProgramaRadio));
   return programas.sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
+};
+
+// ✅ NUEVO: Función para editar un programa existente (para agregar/cambiar imagen)
+export const updateProgramaRadio = async (programaId: string, data: Partial<ProgramaRadio>) => {
+  await updateDoc(doc(db, 'programas_radio', programaId), data);
 };
 
 export const deleteProgramaRadio = async (programaId: string) => {
@@ -215,7 +221,7 @@ export interface Podcast {
   youtubeUrl: string;
   youtubeVideoId: string;
   categoria: string;
-  imagenUrl: string; // ✅ NUEVO: Imagen personalizada del podcast
+  imagenUrl: string;
   tenantId: string;
   createdAt: Timestamp;
 }
@@ -271,7 +277,7 @@ export const addPodcast = async (podcastData: { titulo: string; youtubeUrl: stri
     youtubeUrl: podcastData.youtubeUrl,
     youtubeVideoId: youtubeVideoId,
     categoria: podcastData.categoria,
-    imagenUrl: podcastData.imagenUrl, // ✅ Guardamos la imagen personalizada
+    imagenUrl: podcastData.imagenUrl,
     tenantId: TENANT_ID,
     createdAt: Timestamp.now()
   });
@@ -302,6 +308,15 @@ export const uploadImagenNoticia = async (archivo: File): Promise<string> => {
 
 export const uploadImagenPodcast = async (archivo: File): Promise<string> => {
   const nombreArchivo = `podcasts/${Date.now()}_${archivo.name}`;
+  const storageRef = ref(storage, nombreArchivo);
+  const snapshot = await uploadBytes(storageRef, archivo);
+  const urlDescarga = await getDownloadURL(snapshot.ref);
+  return urlDescarga;
+};
+
+// ✅ NUEVO: Función para subir imagen de Programa de Radio
+export const uploadImagenPrograma = async (archivo: File): Promise<string> => {
+  const nombreArchivo = `programas/${Date.now()}_${archivo.name}`;
   const storageRef = ref(storage, nombreArchivo);
   const snapshot = await uploadBytes(storageRef, archivo);
   const urlDescarga = await getDownloadURL(snapshot.ref);

@@ -3,7 +3,6 @@ import { Carousel } from '../../../shared/components/Carousel';
 import { ProgramCard } from '../../../shared/components/ProgramCard';
 import { getProgramasRadio, getDJs, type ProgramaRadio, type DJ } from '../../../core/firebase/services';
 
-// Interfaz local estricta que coincide exactamente con lo que espera ProgramCard
 interface MappedProgram {
   id: string;
   title: string;
@@ -16,10 +15,12 @@ interface MappedProgram {
 }
 
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=400';
 
 export const LiveProgramsSection = () => {
   const [programs, setPrograms] = useState<MappedProgram[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentDayName, setCurrentDayName] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -29,33 +30,35 @@ export const LiveProgramsSection = () => {
           getDJs()
         ]);
 
-        // 1. Obtener día y hora actual
-        const hoy = new Date().getDay();
-        const nombreDia = DIAS_SEMANA[hoy];
-        
         const ahora = new Date();
+        const hoy = DIAS_SEMANA[ahora.getDay()];
+        setCurrentDayName(hoy);
+        
         const horaActual = `${ahora.getHours().toString().padStart(2, '0')}:${ahora.getMinutes().toString().padStart(2, '0')}`;
 
-        // 2. Filtrar programas de hoy y ordenarlos por hora
         const programasDeHoy = programasData
-          .filter((prog: ProgramaRadio) => prog.dias.includes(nombreDia))
+          .filter((prog: ProgramaRadio) => prog.dias.includes(hoy))
           .sort((a: ProgramaRadio, b: ProgramaRadio) => a.horaInicio.localeCompare(b.horaInicio))
           .map((prog: ProgramaRadio) => {
             const dj = djsData.find((d: DJ) => d.id === prog.djId);
-            
-            // 3. Calcular si está EN VIVO
             const isLive = prog.horaInicio <= horaActual && horaActual <= prog.horaFin;
 
-            // 4. Mapear al formato exacto que espera ProgramCard (Cero 'any')
+            // ✅ PRIORIDAD: 1. Imagen del Programa, 2. Foto del DJ, 3. Imagen por defecto
+            const imageUrl = (prog.imagenUrl && prog.imagenUrl.trim() !== '') 
+              ? prog.imagenUrl 
+              : (dj?.fotoUrl && dj.fotoUrl.trim() !== '') 
+                ? dj.fotoUrl 
+                : DEFAULT_IMAGE;
+
             return {
               id: prog.id,
               title: prog.nombre,
               host: dj ? dj.nombre : 'Por definir',
               time: `${prog.horaInicio} - ${prog.horaFin}`,
               category: prog.descripcion || 'Programa',
-              image: dj?.fotoUrl || 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=400', // Imagen por defecto si no hay foto
+              image: imageUrl,
               isLive: isLive,
-              listeners: isLive ? Math.floor(Math.random() * 2000) + 500 : 0, // Oyentes simulados para consistencia visual
+              listeners: isLive ? Math.floor(Math.random() * 2000) + 500 : 0,
             } as MappedProgram;
           });
 
@@ -80,7 +83,7 @@ export const LiveProgramsSection = () => {
 
   return (
     <Carousel
-      title="Programación de Hoy"
+      title={`Programación de Hoy (${currentDayName})`}
       subtitle="Sintoniza nuestros programas destacados"
     >
       {programs.length > 0 ? (
@@ -89,7 +92,7 @@ export const LiveProgramsSection = () => {
         ))
       ) : (
         <div className="col-span-full text-center py-8 text-text-secondary">
-          <p>No hay programas programados para hoy.</p>
+          <p>No hay programas programados para hoy ({currentDayName}).</p>
         </div>
       )}
     </Carousel>

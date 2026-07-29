@@ -18,6 +18,7 @@ import { Timestamp } from 'firebase/firestore';
 
 const STREAM_URL = "https://streams.radio.co/sf25c76934/listen"; 
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=1920';
 
 export const RadioPage = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -38,7 +39,6 @@ export const RadioPage = () => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   
-
   const ahora = new Date();
   const hoy = DIAS_SEMANA[ahora.getDay()];
   const horaActual = `${ahora.getHours().toString().padStart(2, '0')}:${ahora.getMinutes().toString().padStart(2, '0')}`;
@@ -100,13 +100,12 @@ export const RadioPage = () => {
     return () => clearInterval(listenersInterval);
   }, []);
 
-    // ✅ Scroll al final del chat SOLO al cargar la página por primera vez (si hay mensajes)
-  
+  // ✅ Scroll al final del chat SOLO al cargar la página por primera vez (si hay mensajes)
   useEffect(() => {
     if (chatMessages.length > 0) {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-    }, [chatMessages.length]);
+  }, [chatMessages.length]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -126,7 +125,7 @@ export const RadioPage = () => {
 
   const togglePlay = () => setIsPlaying(!isPlaying);
 
-    const handleSendMessage = async (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
 
@@ -179,6 +178,11 @@ export const RadioPage = () => {
   const currentProgram = programaEnVivo;
   const nextProgram = proximoPrograma;
 
+  // ✅ CAMBIO 1: Prioridad de imagen para el Reproductor Principal
+  const currentProgramImage = (currentProgram?.imagenUrl && currentProgram.imagenUrl.trim() !== '') 
+    ? currentProgram.imagenUrl 
+    : (currentProgram?.djId ? djs.find(d => d.id === currentProgram.djId)?.fotoUrl : '') || DEFAULT_IMAGE;
+
   return (
     <div className="space-y-6 py-6">
       <audio ref={audioRef} src={STREAM_URL} preload="none" crossOrigin="anonymous" />
@@ -187,7 +191,7 @@ export const RadioPage = () => {
       <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-brand-dark via-dark-surface to-dark-bg border border-dark-border">
         <div className="absolute inset-0">
           <img
-            src={currentProgram?.djId ? djs.find(d => d.id === currentProgram.djId)?.fotoUrl || 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=1920' : 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=1920'}
+            src={currentProgramImage}
             alt={currentProgram?.nombre || 'Radio'}
             className="w-full h-full object-cover opacity-20"
           />
@@ -309,9 +313,12 @@ export const RadioPage = () => {
           </h3>
           {nextProgram ? (
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-lg bg-brand/20 flex items-center justify-center">
-                <Mic2 className="w-8 h-8 text-brand" />
-              </div>
+              {/* ✅ CAMBIO 2: Prioridad de imagen para el Próximo Programa */}
+              <img 
+                src={(nextProgram.imagenUrl && nextProgram.imagenUrl.trim() !== '') ? nextProgram.imagenUrl : (djs.find(d => d.id === nextProgram.djId)?.fotoUrl || DEFAULT_IMAGE)} 
+                alt={nextProgram.nombre} 
+                className="w-16 h-16 rounded-lg object-cover flex-shrink-0 border border-dark-border"
+              />
               <div className="flex-1 space-y-1">
                 <h4 className="font-semibold text-white">{nextProgram.nombre}</h4>
                 <p className="text-sm text-text-secondary">{getDJNombre(nextProgram.djId)}</p>
@@ -356,7 +363,7 @@ export const RadioPage = () => {
             <div ref={chatEndRef} />
           </div>
           
-                    {!showChatInput ? (
+          {!showChatInput ? (
             <button 
               onClick={() => {
                 setShowChatInput(true);
@@ -430,6 +437,12 @@ export const RadioPage = () => {
           <div className="space-y-2">
             {programasDeHoy.map((program) => {
               const isLive = program.horaInicio <= horaActual && horaActual <= program.horaFin;
+              
+              // ✅ CAMBIO 3: Prioridad de imagen para la Lista de Programación
+              const listImage = (program.imagenUrl && program.imagenUrl.trim() !== '') 
+                ? program.imagenUrl 
+                : (djs.find(d => d.id === program.djId)?.fotoUrl || DEFAULT_IMAGE);
+
               return (
                 <div
                   key={program.id}
@@ -443,9 +456,14 @@ export const RadioPage = () => {
                     <p className="text-sm font-semibold text-white">{program.horaInicio}</p>
                     <p className="text-xs text-text-muted">{program.horaFin}</p>
                   </div>
-                  <div className="w-12 h-12 rounded-lg bg-brand/20 flex items-center justify-center">
-                    <Mic2 className="w-6 h-6 text-brand" />
-                  </div>
+                  
+                  {/* Aquí se muestra la imagen del programa (o la del DJ si no hay) */}
+                  <img 
+                    src={listImage} 
+                    alt={program.nombre} 
+                    className="w-12 h-12 rounded-lg object-cover flex-shrink-0 border border-dark-border" 
+                  />
+                  
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-white truncate">{program.nombre}</h3>
                     <p className="text-sm text-text-secondary truncate">{getDJNombre(program.djId)}</p>

@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar, User, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Calendar, User, Loader2, CheckCircle, AlertCircle, Edit, Image as ImageIcon } from 'lucide-react';
 import { 
   addProgramaRadio, 
   getProgramasRadio, 
   deleteProgramaRadio, 
+  updateProgramaRadio,
+  uploadImagenPrograma,
   getDJs,
   type ProgramaRadio, 
   type DJ 
@@ -27,7 +29,11 @@ export const ProgramasPage = () => {
     horaFin: '08:00'
   });
 
-  // Cargar datos al montar (usando .then/.catch para cumplir con las reglas de React Hooks)
+  // ✅ NUEVOS ESTADOS PARA EDICIÓN E IMAGEN
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [imagenFile, setImagenFile] = useState<File | null>(null);
+  const [imagenPreview, setImagenPreview] = useState<string>('');
+
   useEffect(() => {
     Promise.all([getDJs(), getProgramasRadio()])
       .then(([djsData, programasData]) => {
@@ -51,6 +57,36 @@ export const ProgramasPage = () => {
     });
   };
 
+  const handleImagenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImagenFile(file);
+      setImagenPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleEdit = (prog: ProgramaRadio) => {
+    setEditingId(prog.id);
+    setFormData({
+      nombre: prog.nombre,
+      descripcion: prog.descripcion,
+      djId: prog.djId,
+      dias: prog.dias,
+      horaInicio: prog.horaInicio,
+      horaFin: prog.horaFin
+    });
+    setImagenPreview(prog.imagenUrl || '');
+    setImagenFile(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setFormData({ nombre: '', descripcion: '', djId: '', dias: [], horaInicio: '07:00', horaFin: '08:00' });
+    setImagenFile(null);
+    setImagenPreview('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -63,25 +99,39 @@ export const ProgramasPage = () => {
       setSaving(true);
       setMessage(null);
       
-      await addProgramaRadio({
+      // Si estamos editando, mantenemos la imagen anterior a menos que se suba una nueva
+      let imagenUrl = editingId ? (programas.find(p => p.id === editingId)?.imagenUrl || '') : '';
+
+      if (imagenFile) {
+        imagenUrl = await uploadImagenPrograma(imagenFile);
+      }
+
+      const payload = {
         nombre: formData.nombre.trim(),
         descripcion: formData.descripcion.trim(),
         djId: formData.djId,
         dias: formData.dias,
         horaInicio: formData.horaInicio,
-        horaFin: formData.horaFin
-      });
+        horaFin: formData.horaFin,
+        imagenUrl: imagenUrl || undefined
+      };
 
-      setFormData({ nombre: '', descripcion: '', djId: '', dias: [], horaInicio: '07:00', horaFin: '08:00' });
+      if (editingId) {
+        await updateProgramaRadio(editingId, payload);
+      } else {
+        await addProgramaRadio(payload);
+      }
+
+      handleCancelEdit(); // Resetea el formulario
       
       const data = await getProgramasRadio();
       setProgramas(data);
       
-      setMessage({ type: 'success', text: 'Programa agregado exitosamente' });
+      setMessage({ type: 'success', text: editingId ? 'Programa actualizado exitosamente' : 'Programa agregado exitosamente' });
       setTimeout(() => setMessage(null), 3000);
     } catch (error) {
-      console.error('Error al agregar Programa:', error);
-      setMessage({ type: 'error', text: 'Error al agregar el programa' });
+      console.error('Error al guardar Programa:', error);
+      setMessage({ type: 'error', text: 'Error al guardar el programa' });
     } finally {
       setSaving(false);
     }
@@ -128,12 +178,12 @@ export const ProgramasPage = () => {
       )}
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Formulario para agregar Programa */}
+        {/* Formulario para agregar/editar Programa */}
         <div className="lg:col-span-1">
           <div className="p-6 rounded-xl bg-dark-surface border border-dark-border sticky top-6">
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <Plus className="w-5 h-5 text-brand" />
-              Agregar Nuevo Programa
+              {editingId ? <Edit className="w-5 h-5 text-brand" /> : <Plus className="w-5 h-5 text-brand" />}
+              {editingId ? 'Editar Programa' : 'Agregar Nuevo Programa'}
             </h2>
             
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -220,17 +270,55 @@ export const ProgramasPage = () => {
                 </div>
               </div>
 
-              <button
-                type="submit"
-                disabled={saving}
-                className="w-full py-3 rounded-lg bg-brand hover:bg-brand-light text-white font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {saving ? (
-                  <><Loader2 className="w-5 h-5 animate-spin" /> Guardando...</>
-                ) : (
-                  <><Plus className="w-5 h-5" /> Agregar Programa</>
+              {/* ✅ NUEVO: Campo de Imagen del Programa */}
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-2">Imagen del Programa (Opcional)</label>
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-dark-border rounded-lg cursor-pointer bg-dark-bg hover:bg-dark-elevated transition-colors">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    {imagenPreview ? (
+                      <img src={imagenPreview} alt="Vista previa" className="h-full object-contain rounded" />
+                    ) : (
+                      <>
+                        <ImageIcon className="w-8 h-8 text-text-muted mb-2" />
+                        <p className="text-xs text-text-secondary text-center px-4">
+                          Clic para seleccionar imagen
+                        </p>
+                      </>
+                    )}
+                  </div>
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={handleImagenChange}
+                    disabled={saving}
+                  />
+                </label>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 py-3 rounded-lg bg-brand hover:bg-brand-light text-white font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {saving ? (
+                    <><Loader2 className="w-5 h-5 animate-spin" /> Guardando...</>
+                  ) : (
+                    <><Plus className="w-5 h-5" /> {editingId ? 'Actualizar Programa' : 'Agregar Programa'}</>
+                  )}
+                </button>
+                {editingId && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    disabled={saving}
+                    className="px-4 py-3 rounded-lg bg-dark-elevated hover:bg-dark-border text-white font-bold transition-colors disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
                 )}
-              </button>
+              </div>
             </form>
           </div>
         </div>
@@ -259,6 +347,15 @@ export const ProgramasPage = () => {
                     key={prog.id}
                     className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-lg bg-dark-bg border border-dark-border hover:border-brand/30 transition-colors group"
                   >
+                    {/* Miniatura de la imagen del programa si existe */}
+                    {prog.imagenUrl && (
+                      <img 
+                        src={prog.imagenUrl} 
+                        alt={prog.nombre} 
+                        className="w-16 h-16 rounded-lg object-cover flex-shrink-0 border border-dark-border"
+                      />
+                    )}
+                    
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-semibold text-white truncate">{prog.nombre}</h3>
@@ -279,13 +376,22 @@ export const ProgramasPage = () => {
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => handleDelete(prog.id, prog.nombre)}
-                      className="self-end sm:self-center p-2 rounded-lg text-text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
-                      title="Eliminar Programa"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                    <div className="flex gap-2 self-end sm:self-center">
+                      <button
+                        onClick={() => handleEdit(prog)}
+                        className="p-2 rounded-lg text-text-muted hover:text-brand hover:bg-brand/10 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Editar Programa"
+                      >
+                        <Edit className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(prog.id, prog.nombre)}
+                        className="p-2 rounded-lg text-text-muted hover:text-red-500 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Eliminar Programa"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
