@@ -25,7 +25,7 @@ export const servicesData: Service[] = [
     id: 's3', category: 'Audio', title: 'Alquiler de Sistemas de Parlantes',
     description: 'Sistemas de sonido line array y point source para cobertura total.',
     equipment: ['JBL PRX800', 'QSC K12.2', 'Subwoofers 18"', 'Monitores de piso'],
-    image: 'https://images.unsplash.com/photo-1520166012956-add9ba0835bb?w=800'
+    image: 'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=800'
   },
   {
     id: 's4', category: 'Audio', title: 'Grabación de Audio en Locación',
