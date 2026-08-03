@@ -7,22 +7,20 @@ import {
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
-// ✅ Importamos el componente del botón de instalación
 import { InstallAppButton } from '../../components/InstallAppButton';
 
-// ✅ URL DE TU STREAM DE RADIO.CO
 const STREAM_URL = "https://streams.radio.co/sf25c76934/listen";
+// ✅ URL de WhatsApp con el nuevo número y mensaje predefinido
+const WHATSAPP_URL = "https://wa.me/573151615474?text=" + encodeURIComponent("Hola La Poderosa, quiero más información");
 
 export const MainLayout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
-  // Estados del reproductor global
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // 1. Controlar reproducción cuando cambia el estado isPlaying
   useEffect(() => {
     if (audioRef.current) {
       if (isPlaying) {
@@ -33,14 +31,12 @@ export const MainLayout = () => {
     }
   }, [isPlaying]);
 
-  // 2. Controlar volumen
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : 0.75; // 75% de volumen por defecto
+      audioRef.current.volume = isMuted ? 0 : 0.75;
     }
   }, [isMuted]);
 
-  // 3. ESCUCHAR el mensaje del botón "Escuchar Ahora" del HeroSection
   useEffect(() => {
     const handleRadioControl = (event: Event) => {
       const customEvent = event as CustomEvent<{ action: 'play' | 'pause' }>;
@@ -52,7 +48,6 @@ export const MainLayout = () => {
     };
 
     window.addEventListener('radio-control', handleRadioControl);
-
     return () => {
       window.removeEventListener('radio-control', handleRadioControl);
     };
@@ -65,11 +60,10 @@ export const MainLayout = () => {
     ? 'from-black/20 via-black/40 to-black/60' 
     : 'from-black/60 via-black/80 to-black/90');
 
-  // ✅ BARRA INFERIOR MÓVIL ACTUALIZADA: Ahora incluye Servicios (5 elementos)
   const mainNav = [
     { to: '/', icon: Home, label: 'Inicio' },
     { to: '/emisora', icon: Radio, label: 'Emisora' },
-    { to: '/servicios', icon: Briefcase, label: 'Servicios' }, // ✅ AGREGADO AQUÍ
+    { to: '/servicios', icon: Briefcase, label: 'Servicios' },
     { to: '/television', icon: Tv, label: 'TV' },
     { to: '/noticias', icon: Newspaper, label: 'Noticias' },
   ];
@@ -92,49 +86,26 @@ export const MainLayout = () => {
 
   return (
     <div className="min-h-screen bg-dark-bg text-text-primary flex flex-col relative">
-      {/* Elemento de Audio Global Oculto */}
-      <audio 
-        ref={audioRef} 
-        src={STREAM_URL} 
-        preload="none" 
-        crossOrigin="anonymous"
-      />
+      <audio ref={audioRef} src={STREAM_URL} preload="none" crossOrigin="anonymous" />
 
-      {/* VIDEO DE FONDO GLOBAL */}
       <div className="fixed inset-0 z-0 block">
-        <video 
-          autoPlay 
-          muted 
-          loop 
-          playsInline 
-          className="w-full h-full object-cover" 
-          poster="https://images.pexels.com/photos/5765711/pexels-photo-5765711.jpeg"
-        >
+        <video autoPlay muted loop playsInline className="w-full h-full object-cover" poster="https://images.pexels.com/photos/5765711/pexels-photo-5765711.jpeg">
           <source src="/fondo_poderosa.mov" type="video/mp4" />
         </video>
       </div>
 
-      {/* OVERLAY OSCURO GLOBAL */}
       <div className={`fixed inset-0 z-[1] bg-gradient-to-b ${getOverlay()}`} />
 
-      {/* CONTENIDO PRINCIPAL */}
       <div className="relative z-10 flex flex-col min-h-screen">
         <header className="sticky top-0 z-50 bg-black/30 backdrop-blur-xl border-b border-white/10">
           <div className="px-4 py-3 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <button 
-                className="md:hidden p-2 rounded-lg hover:bg-white/10" 
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              >
+              <button className="md:hidden p-2 rounded-lg hover:bg-white/10" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
               
               <NavLink to="/" className="flex items-center gap-3">
-                <img 
-                  src="/logo.png" 
-                  alt="LA PODEROSA" 
-                  className="h-16 w-16 rounded-full object-cover shadow-lg shadow-brand/20 border-2 border-brand/30" 
-                />
+                <img src="/logo.png" alt="LA PODEROSA" className="h-16 w-16 rounded-full object-cover shadow-lg shadow-brand/20 border-2 border-brand/30" />
                 <div className="flex flex-col">
                   <h1 className="text-xl font-black tracking-tight leading-none text-white">LA PODEROSA</h1>
                   <p className="text-[10px] text-white/70 uppercase tracking-widest">Medios Digitales</p>
@@ -151,14 +122,11 @@ export const MainLayout = () => {
                 <Bell className="w-5 h-5 text-white/80" />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand rounded-full" />
               </button>
-              
-              {/* ✅ BOTÓN DE INSTALACIÓN */}
               <InstallAppButton />
             </div>
           </div>
         </header>
 
-        {/* ✅ BANNER DE PUBLICIDAD (Aparece en todas las páginas públicas) */}
         <AdBanner />
 
         <div className="flex flex-1">
@@ -205,8 +173,6 @@ export const MainLayout = () => {
                     <span className="font-medium">{item.label}</span>
                   </NavLink>
                 ))}
-                
-                {/* ✅ BOTÓN DE INSTALACIÓN PARA EL MENÚ MÓVIL */}
                 <div className="pt-4 mt-4 border-t border-white/10 flex justify-center">
                   <InstallAppButton />
                 </div>
@@ -234,7 +200,18 @@ export const MainLayout = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            {/* ✅ BOTONES DE ACCIÓN: WhatsApp + Play */}
+            <div className="flex items-center gap-3 md:gap-4">
+              <a 
+                href={WHATSAPP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center transition-all hover:scale-105 text-white shadow-lg shadow-green-500/20"
+                aria-label="Contactar por WhatsApp"
+              >
+                <MessageCircle className="w-5 h-5 fill-current" />
+              </a>
+
               <button 
                 onClick={togglePlay}
                 className="w-10 h-10 rounded-full bg-brand hover:bg-brand-light flex items-center justify-center transition-all hover:scale-105"
@@ -252,15 +229,13 @@ export const MainLayout = () => {
                 {isMuted ? <VolumeX className="w-5 h-5 text-white/70" /> : <Volume2 className="w-5 h-5 text-white/70" />}
               </button>
               <div className="w-24 h-1.5 bg-white/20 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full bg-brand transition-all ${isMuted ? 'w-0' : 'w-3/4'}`} 
-                />
+                <div className={`h-full bg-brand transition-all ${isMuted ? 'w-0' : 'w-3/4'}`} />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Navegación Móvil Inferior (Ahora con 5 elementos) */}
+        {/* Navegación Móvil Inferior */}
         <nav className="fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-white/10 md:hidden h-16">
           <div className="flex justify-around items-center h-full">
             {mainNav.map((item) => (
