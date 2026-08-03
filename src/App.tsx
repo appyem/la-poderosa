@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { SplashScreen } from './shared/components/SplashScreen';
 import { MainLayout } from './shared/layouts/MainLayout';
 import { AdminLayout } from './shared/layouts/AdminLayout';
-import { AIAssistant } from './shared/components/AIAssistant';
+import { WhatsAppButton } from './shared/components/WhatsAppButton';
 import { HomePage } from './modules/home/pages/HomePage';
 import { RadioPage } from './modules/media/pages/RadioPage';
 import { TVPage } from './modules/media/pages/TVPage';
@@ -89,7 +89,7 @@ function App() {
           <Route path="configuracion" element={<Placeholder title="Configuración" />} />
         </Route>
       </Routes>
-      <AIAssistant />
+      <WhatsAppButton />
     </BrowserRouter>
   );
 }
