@@ -13,15 +13,22 @@ interface AdaptedPodcast {
   category: string;
 }
 
-const adaptPodcast = (p: Podcast): AdaptedPodcast => ({
-  id: p.id,
-  title: p.titulo,
-  author: 'LA PODEROSA', // Default ya que el tipo actual no tiene autor
-  episodes: 1,
-  duration: 'Variable',
-  image: obtenerImagenPrevisualizacionYoutube(p.youtubeVideoId),
-  category: p.categoria
-});
+const adaptPodcast = (p: Podcast): AdaptedPodcast => {
+  // ✅ PRIORIDAD: 1. Imagen personalizada, 2. Miniatura de YouTube, 3. Imagen por defecto
+  const imageUrl = (p.imagenUrl && p.imagenUrl.trim() !== '') 
+    ? p.imagenUrl 
+    : (p.youtubeVideoId ? obtenerImagenPrevisualizacionYoutube(p.youtubeVideoId) : 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400');
+
+  return {
+    id: p.id,
+    title: p.titulo,
+    author: 'LA PODEROSA',
+    episodes: 1,
+    duration: 'Variable',
+    image: imageUrl,
+    category: p.categoria
+  };
+};
 
 export const PodcastsPage = () => {
   const [podcasts, setPodcasts] = useState<AdaptedPodcast[]>([]);
@@ -39,7 +46,6 @@ export const PodcastsPage = () => {
       });
   }, []);
 
-  // Extraer categorías únicas dinámicamente
   const categories = ['Todos', ...Array.from(new Set(podcasts.map(p => p.category).filter(Boolean)))];
 
   if (loading) {

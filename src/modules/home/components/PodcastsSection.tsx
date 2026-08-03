@@ -1,10 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Mic, Loader2, Video } from 'lucide-react';
-import { 
-  getPodcasts, 
-  obtenerImagenPrevisualizacionYoutube, 
-  type Podcast 
-} from '../../../core/firebase/services';
+import { getPodcasts, obtenerImagenPrevisualizacionYoutube, type Podcast } from '../../../core/firebase/services';
 
 export const PodcastsSection = () => {
   const [podcasts, setPodcasts] = useState<Podcast[]>([]);
@@ -21,6 +17,17 @@ export const PodcastsSection = () => {
         setLoading(false);
       });
   }, []);
+
+  // ✅ FUNCIÓN DE PRIORIDAD DE IMAGEN
+  const getPodcastImage = (podcast: Podcast) => {
+    if (podcast.imagenUrl && podcast.imagenUrl.trim() !== '') {
+      return podcast.imagenUrl;
+    }
+    if (podcast.youtubeVideoId) {
+      return obtenerImagenPrevisualizacionYoutube(podcast.youtubeVideoId);
+    }
+    return 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400';
+  };
 
   if (loading) {
     return (
@@ -53,11 +60,11 @@ export const PodcastsSection = () => {
             >
               <div className="relative aspect-video bg-black">
                 <img 
-                  src={obtenerImagenPrevisualizacionYoutube(podcast.youtubeVideoId)} 
+                  src={getPodcastImage(podcast)} 
                   alt={podcast.titulo}
                   className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                   onError={(e) => { 
-                    (e.target as HTMLImageElement).src = 'https://via.placeholder.com/320x180?text=Sin+Imagen'; 
+                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400'; 
                   }}
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/10 transition-colors">

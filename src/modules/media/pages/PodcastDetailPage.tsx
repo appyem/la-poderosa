@@ -23,12 +23,17 @@ export const PodcastDetailPage = () => {
     getPodcasts().then(data => {
       const found = data.find(p => p.id === id);
       if (found) {
+        // ✅ PRIORIDAD DE IMAGEN AQUÍ TAMBIÉN
+        const imageUrl = (found.imagenUrl && found.imagenUrl.trim() !== '') 
+          ? found.imagenUrl 
+          : (found.youtubeVideoId ? obtenerImagenPrevisualizacionYoutube(found.youtubeVideoId) : 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400');
+
         setPodcast({
           id: found.id,
           title: found.titulo,
           author: 'LA PODEROSA',
           episodes: 1,
-          image: obtenerImagenPrevisualizacionYoutube(found.youtubeVideoId),
+          image: imageUrl,
           category: found.categoria,
           youtubeUrl: found.youtubeUrl
         });
@@ -50,7 +55,6 @@ export const PodcastDetailPage = () => {
     );
   }
 
-  // Mock de episodios (hasta que se implemente gestión de episodios por separado)
   const episodes = [
     { id: 'ep1', title: `Episodio completo: ${podcast.title}`, duration: 'Variable', date: 'Hoy', plays: 'N/A' },
   ];
