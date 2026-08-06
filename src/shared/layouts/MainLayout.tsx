@@ -9,7 +9,7 @@ import { useState, useRef, useEffect } from 'react';
 
 import { InstallAppButton } from '../../components/InstallAppButton';
 
-const STREAM_URL = "https://streams.radio.co/sf25c76935/listen";
+const STREAM_URL = "https://streams.radio.co/sf25c76934/listen";
 // ✅ URL de WhatsApp con el nuevo número y mensaje predefinido
 const WHATSAPP_URL = "https://wa.me/573151615474?text=" + encodeURIComponent("Hola La Poderosa, quiero más información");
 

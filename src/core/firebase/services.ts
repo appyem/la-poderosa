@@ -396,3 +396,31 @@ export const uploadImagenAnuncio = async (archivo: File): Promise<string> => {
   const urlDescarga = await getDownloadURL(snapshot.ref);
   return urlDescarga;
 };
+
+// ==========================================
+// FUNCIONES PARA ANALÍTICAS DE INSTALACIONES PWA
+// ==========================================
+export interface Instalacion {
+  id: string;
+  fecha: Timestamp;
+  dispositivo: string;
+  navegador: string;
+  tenantId: string;
+}
+
+export const addInstalacion = async (dispositivo: string, navegador: string) => {
+  await addDoc(collection(db, 'instalaciones'), {
+    fecha: Timestamp.now(),
+    dispositivo,
+    navegador,
+    tenantId: TENANT_ID
+  });
+};
+
+export const getEstadisticasInstalaciones = async (): Promise<Instalacion[]> => {
+  const q = query(collection(db, 'instalaciones'), where('tenantId', '==', TENANT_ID));
+  const snapshot = await getDocs(q);
+  return snapshot.docs
+    .map(doc => ({ id: doc.id, ...doc.data() } as Instalacion))
+    .sort((a, b) => b.fecha.toMillis() - a.fecha.toMillis());
+};

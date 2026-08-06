@@ -25,6 +25,7 @@ import { ProtectedRoute } from './shared/components/ProtectedRoute';
 import { NoticiasPodcastsPage } from './modules/dashboard/pages/NoticiasPodcastsPage';
 import { StreamingPage } from './modules/dashboard/pages/StreamingPage';
 import { PublicidadPage } from './modules/dashboard/pages/PublicidadPage';
+import { AnaliticasPage } from './modules/dashboard/pages/AnaliticasPage';
 
 const Placeholder = ({ title }: { title: string }) => (
   <div className="flex items-center justify-center min-h-[60vh]">
@@ -84,7 +85,7 @@ function App() {
           <Route path="contenido" element={<NoticiasPodcastsPage />} />
           <Route path="streaming" element={<StreamingPage />} />
           <Route path="publicidad" element={<PublicidadPage />} />
-          <Route path="analiticas" element={<Placeholder title="Analíticas" />} />
+          <Route path="analiticas" element={<AnaliticasPage />} />
           <Route path="ia" element={<Placeholder title="Herramientas IA" />} />
           <Route path="configuracion" element={<Placeholder title="Configuración" />} />
         </Route>

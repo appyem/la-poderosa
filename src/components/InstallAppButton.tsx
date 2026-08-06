@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Download, Share, X, Smartphone } from 'lucide-react';
+import { addInstalacion } from '../core/firebase/services';
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -28,13 +29,28 @@ export const InstallAppButton = () => {
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, []);
 
   if (isInstalled) return null;
+
+  const getDeviceType = () => {
+    const ua = navigator.userAgent;
+    if (/android/i.test(ua)) return 'Android';
+    if (/iPad|iPhone|iPod/.test(ua) && !('MSStream' in window)) return 'iOS';
+    return 'Desktop';
+  };
+
+  const getBrowser = () => {
+    const ua = navigator.userAgent;
+    if (ua.includes('Firefox')) return 'Firefox';
+    if (ua.includes('SamsungBrowser')) return 'Samsung Internet';
+    if (ua.includes('Opera') || ua.includes('OPR')) return 'Opera';
+    if (ua.includes('Edge')) return 'Edge';
+    if (ua.includes('Chrome')) return 'Chrome';
+    if (ua.includes('Safari')) return 'Safari';
+    return 'Desconocido';
+  };
 
   const handleInstallClick = () => {
     const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !('MSStream' in window);
@@ -43,9 +59,11 @@ export const InstallAppButton = () => {
       setShowIosInstructions(true);
     } else if (deferredPrompt) {
       deferredPrompt.prompt();
-      deferredPrompt.userChoice.then((choiceResult) => {
+      deferredPrompt.userChoice.then(async (choiceResult) => {
         if (choiceResult.outcome === 'accepted') {
           console.log('✅ Usuario aceptó la instalación');
+          // ✅ REGISTRAR EN FIRESTORE
+          await addInstalacion(getDeviceType(), getBrowser());
         }
         setDeferredPrompt(null);
       });
@@ -54,7 +72,6 @@ export const InstallAppButton = () => {
 
   return (
     <>
-      {/* ✅ BOTÓN MEJORADO: Vertical en celular, horizontal en escritorio */}
       <button
         onClick={handleInstallClick}
         className="flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 px-3 py-2 rounded-lg bg-brand text-white font-bold shadow-lg hover:opacity-90 transition-all active:scale-95"
@@ -69,13 +86,9 @@ export const InstallAppButton = () => {
       {showIosInstructions && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-dark-surface border border-dark-border rounded-2xl p-6 max-w-sm w-full relative shadow-2xl">
-            <button 
-              onClick={() => setShowIosInstructions(false)}
-              className="absolute top-4 right-4 text-text-secondary hover:text-white"
-            >
+            <button onClick={() => setShowIosInstructions(false)} className="absolute top-4 right-4 text-text-secondary hover:text-white">
               <X className="w-6 h-6" />
             </button>
-            
             <div className="text-center space-y-4">
               <div className="w-16 h-16 bg-brand/20 rounded-full flex items-center justify-center mx-auto">
                 <Smartphone className="w-8 h-8 text-brand" />
@@ -94,10 +107,7 @@ export const InstallAppButton = () => {
                   <span>Desliza hacia arriba y selecciona <strong>"Agregar a inicio"</strong>.</span>
                 </div>
               </div>
-              <button 
-                onClick={() => setShowIosInstructions(false)}
-                className="w-full py-3 rounded-xl bg-brand text-white font-bold hover:opacity-90 transition-colors"
-              >
+              <button onClick={() => setShowIosInstructions(false)} className="w-full py-3 rounded-xl bg-brand text-white font-bold hover:opacity-90 transition-colors">
                 ¡Entendido!
               </button>
             </div>
