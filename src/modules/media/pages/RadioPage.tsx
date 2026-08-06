@@ -16,7 +16,7 @@ import {
 } from '../../../core/firebase/services';
 import { Timestamp } from 'firebase/firestore';
 
-const STREAM_URL = "https://streams.radio.co/sf25c76934/listen"; 
+const STREAM_URL = "https://streams.radio.co/sf25c76935/listen"; 
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=1920';
 
