@@ -51,7 +51,7 @@ function App() {
   // 2. Guarde el archivo (Cmd + S).
   // 3. Haga git add, git commit y git push.
   // ========================================================================
-  const SHOW_LIMIT_MESSAGE = true; 
+  const SHOW_LIMIT_MESSAGE = false; 
 
   // Si está en true, muestra el mensaje de límite de servidor y detiene la carga del resto de la app
   if (SHOW_LIMIT_MESSAGE) {
