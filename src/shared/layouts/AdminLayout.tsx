@@ -30,6 +30,7 @@ export const AdminLayout = () => {
     { to: '/dashboard/streaming', icon: Radio, label: 'Control de Streaming' },
     { to: '/dashboard/publicidad', icon: Megaphone, label: 'Publicidad' },
     { to: '/dashboard/analiticas', icon: BarChart3, label: 'Analíticas' },
+    { to: '/dashboard/aliados', icon: Users, label: 'Aliados' },
     { to: '/dashboard/ia', icon: Bot, label: 'Herramientas IA' },
     { to: '/dashboard/configuracion', icon: Settings, label: 'Configuración' },
   ];

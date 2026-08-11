@@ -424,3 +424,48 @@ export const getEstadisticasInstalaciones = async (): Promise<Instalacion[]> => 
     .map(doc => ({ id: doc.id, ...doc.data() } as Instalacion))
     .sort((a, b) => b.fecha.toMillis() - a.fecha.toMillis());
 };
+
+// ==========================================
+// FUNCIONES PARA ALIADOS (Transformado de Galerías)
+// ==========================================
+export interface Aliado {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  imagenUrl: string;
+  enlaceUrl: string;
+  tenantId: string;
+  createdAt: Timestamp;
+}
+
+export const addAliado = async (aliadoData: Omit<Aliado, 'id' | 'tenantId' | 'createdAt'>) => {
+  const docRef = await addDoc(collection(db, 'aliados'), {
+    ...aliadoData,
+    tenantId: TENANT_ID,
+    createdAt: Timestamp.now()
+  });
+  return docRef.id;
+};
+
+export const getAliados = async (): Promise<Aliado[]> => {
+  const q = query(collection(db, 'aliados'), where('tenantId', '==', TENANT_ID));
+  const snapshot = await getDocs(q);
+  const aliados = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Aliado));
+  return aliados.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+};
+
+export const updateAliado = async (aliadoId: string, data: Partial<Aliado>) => {
+  await updateDoc(doc(db, 'aliados', aliadoId), data);
+};
+
+export const deleteAliado = async (aliadoId: string) => {
+  await deleteDoc(doc(db, 'aliados', aliadoId));
+};
+
+export const uploadImagenAliado = async (archivo: File): Promise<string> => {
+  const nombreArchivo = `aliados/${Date.now()}_${archivo.name}`;
+  const storageRef = ref(storage, nombreArchivo);
+  const snapshot = await uploadBytes(storageRef, archivo);
+  const urlDescarga = await getDownloadURL(snapshot.ref);
+  return urlDescarga;
+};

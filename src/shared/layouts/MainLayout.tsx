@@ -1,16 +1,15 @@
 import { AdBanner } from '../components/AdBanner';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { 
-  Home, Radio, Tv, Newspaper, Calendar, ImageIcon, 
+  Home, Radio, Tv, Newspaper, Calendar, 
   Mic2, MessageCircle, Users, Megaphone, Phone, LayoutDashboard, 
-  Menu, X, Search, Bell, Play, Pause, Volume2, VolumeX, Briefcase
+  Menu, X, Search, Bell, Play, Pause, Volume2, VolumeX, Briefcase, Handshake
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
 import { InstallAppButton } from '../../components/InstallAppButton';
 
 const STREAM_URL = "https://streams.radio.co/sf25c76934/listen";
-// ✅ URL de WhatsApp con el nuevo número y mensaje predefinido
 const WHATSAPP_URL = "https://wa.me/573151615474?text=" + encodeURIComponent("Hola La Poderosa, quiero más información");
 
 export const MainLayout = () => {
@@ -76,7 +75,7 @@ export const MainLayout = () => {
     { to: '/noticias', icon: Newspaper, label: 'Noticias' },
     { to: '/programacion', icon: Calendar, label: 'Programación' },
     { to: '/servicios', icon: Briefcase, label: 'Servicios' },
-    { to: '/galerias', icon: ImageIcon, label: 'Galerías' },
+    { to: '/aliados', icon: Handshake, label: 'Aliados' },
     { to: '/chat', icon: MessageCircle, label: 'Chat' },
     { to: '/comunidad', icon: Users, label: 'Comunidad' },
     { to: '/publicidad', icon: Megaphone, label: 'Publicidad' },
@@ -89,7 +88,7 @@ export const MainLayout = () => {
       <audio ref={audioRef} src={STREAM_URL} preload="none" crossOrigin="anonymous" />
 
       <div className="fixed inset-0 z-0 block">
-        <video autoPlay muted loop playsInline className="w-full h-full object-cover" poster="https://images.pexels.com/photos/5765711/pexels-photo-5765711.jpeg">
+        <video autoPlay muted loop playsInline className="w-full h-full object-cover bg-dark-bg">
           <source src="/fondo_poderosa.mov" type="video/mp4" />
         </video>
       </div>
@@ -187,7 +186,6 @@ export const MainLayout = () => {
           </main>
         </div>
 
-        {/* 🎵 REPRODUCTOR GLOBAL PERSISTENTE (Mini Player) */}
         <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-t border-white/10 px-4 py-3">
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -200,7 +198,6 @@ export const MainLayout = () => {
               </div>
             </div>
 
-            {/* ✅ BOTONES DE ACCIÓN: WhatsApp + Play */}
             <div className="flex items-center gap-3 md:gap-4">
               <a 
                 href={WHATSAPP_URL}
@@ -235,7 +232,6 @@ export const MainLayout = () => {
           </div>
         </div>
 
-        {/* Navegación Móvil Inferior */}
         <nav className="fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-white/10 md:hidden h-16">
           <div className="flex justify-around items-center h-full">
             {mainNav.map((item) => (
