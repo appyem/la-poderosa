@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Users, User, Radio, Calendar, Newspaper, 
-  Megaphone, BarChart3, Settings, LogOut, ChevronDown, Building2, Bot 
+  Megaphone, BarChart3, Settings, LogOut, ChevronDown, Building2, Bot, Bell 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { logout } from '../../core/firebase/services';
@@ -29,6 +29,7 @@ export const AdminLayout = () => {
     { to: '/dashboard/contenido', icon: Newspaper, label: 'Noticias y Podcasts' },
     { to: '/dashboard/streaming', icon: Radio, label: 'Control de Streaming' },
     { to: '/dashboard/publicidad', icon: Megaphone, label: 'Publicidad' },
+    { to: '/dashboard/notificaciones', icon: Bell, label: 'Notificaciones' },
     { to: '/dashboard/analiticas', icon: BarChart3, label: 'Analíticas' },
     { to: '/dashboard/aliados', icon: Users, label: 'Aliados' },
     { to: '/dashboard/ia', icon: Bot, label: 'Herramientas IA' },

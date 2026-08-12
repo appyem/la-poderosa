@@ -6,6 +6,7 @@ import {
   Menu, X, Search, Bell, Play, Pause, Volume2, VolumeX, Briefcase, Handshake
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
+import { solicitarPermisoNotificaciones } from '../../core/firebase/services';
 
 import { InstallAppButton } from '../../components/InstallAppButton';
 
@@ -35,6 +36,16 @@ export const MainLayout = () => {
       audioRef.current.volume = isMuted ? 0 : 0.75;
     }
   }, [isMuted]);
+
+    // ✅ Solicitar permiso de notificaciones al entrar al sitio (una sola vez)
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      const timer = setTimeout(() => {
+        solicitarPermisoNotificaciones();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   useEffect(() => {
     const handleRadioControl = (event: Event) => {

@@ -469,3 +469,44 @@ export const uploadImagenAliado = async (archivo: File): Promise<string> => {
   const urlDescarga = await getDownloadURL(snapshot.ref);
   return urlDescarga;
 };
+
+// ==========================================
+// FUNCIONES PARA NOTIFICACIONES PUSH (FCM)
+// ==========================================
+import { getMessaging, getToken } from 'firebase/messaging';
+import  app  from './config';
+
+const messaging = getMessaging(app);
+const VAPID_KEY = 'BC4NfyTTMfvZtsShIsbXgkVXvaurDHopulWwD9uv7yzQ9WrNEYNlhxrMr89YniUrrUSdacHJWxpjPVz-PZqZdhM';
+
+export const solicitarPermisoNotificaciones = async () => {
+  try {
+    // 1. Pedir permiso al navegador
+    const permission = await Notification.requestPermission();
+    
+    if (permission === 'granted') {
+      // 2. Obtener el token único del dispositivo
+      const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
+
+      if (currentToken) {
+        // 3. Guardar el token en Firestore para poder enviarle notificaciones después
+        await addDoc(collection(db, 'tokens_notificaciones'), {
+          token: currentToken,
+          fecha: Timestamp.now(),
+          tenantId: TENANT_ID
+        });
+        console.log('✅ Token de notificación guardado exitosamente.');
+        return true;
+      } else {
+        console.log('No se pudo generar el token de registro.');
+        return false;
+      }
+    } else {
+      console.log('El usuario denegó el permiso de notificaciones.');
+      return false;
+    }
+  } catch (error) {
+    console.error('Error al obtener permiso de notificación:', error);
+    return false;
+  }
+};

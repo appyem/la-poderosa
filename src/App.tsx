@@ -13,7 +13,7 @@ import { NewsPage } from './modules/news/pages/NewsPage';
 import { NewsDetailPage } from './modules/news/pages/NewsDetailPage';
 import { SchedulePage } from './modules/schedule/pages/SchedulePage';
 import { ServicesPage } from './modules/events/pages/ServicesPage';
-import { GalleriesPage } from './modules/galleries/pages/GalleriesPage'; // Ahora es Aliados internamente
+import { GalleriesPage } from './modules/galleries/pages/GalleriesPage';
 import { AdsPage } from './modules/ads/pages/AdsPage';
 import { ContactPage } from './modules/contact/pages/ContactPage';
 import { ChatPage } from './modules/community/pages/ChatPage';
@@ -28,6 +28,8 @@ import { StreamingPage } from './modules/dashboard/pages/StreamingPage';
 import { PublicidadPage } from './modules/dashboard/pages/PublicidadPage';
 import { AnaliticasPage } from './modules/dashboard/pages/AnaliticasPage';
 import { AliadosPage } from './modules/dashboard/pages/AliadosPage';
+// ✅ IMPORTACIÓN DE LA PÁGINA DE NOTIFICACIONES
+import { NotificacionesPage } from './modules/dashboard/pages/NotificacionesPage';
 
 const Placeholder = ({ title }: { title: string }) => (
   <div className="flex items-center justify-center min-h-[60vh]">
@@ -63,7 +65,6 @@ function App() {
           <Route path="noticias/:id" element={<NewsDetailPage />} />
           <Route path="programacion" element={<SchedulePage />} />
           <Route path="servicios" element={<ServicesPage />} />
-          {/* ✅ Ruta pública de Aliados (antes era Galerías) */}
           <Route path="aliados" element={<GalleriesPage />} />
           <Route path="publicidad" element={<AdsPage />} />
           <Route path="contacto" element={<ContactPage />} />
@@ -92,7 +93,10 @@ function App() {
           <Route path="streaming" element={<StreamingPage />} />
           <Route path="publicidad" element={<PublicidadPage />} />
           <Route path="analiticas" element={<AnaliticasPage />} />
-          {/* ✅ RUTA FALTANTE QUE CAUSABA LA REDIRECCIÓN */}
+          
+          {/* ✅ RUTA DE NOTIFICACIONES CORRECTAMENTE ANIDADA DENTRO DE /DASHBOARD */}
+          <Route path="notificaciones" element={<NotificacionesPage />} />
+          
           <Route path="aliados" element={<AliadosPage />} />
           <Route path="ia" element={<Placeholder title="Herramientas IA" />} />
           <Route path="configuracion" element={<Placeholder title="Configuración" />} />
