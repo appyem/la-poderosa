@@ -33,7 +33,7 @@ exports.enviarNotificacionPush = functions.https.onCall(async (data, context) =>
     };
 
     // 3. Enviar la notificación a todos los dispositivos
-    const response = await admin.messaging().sendMulticast(message);
+    const response = await admin.messaging().sendEachForMulticast(message);
 
     return {
       success: true,
