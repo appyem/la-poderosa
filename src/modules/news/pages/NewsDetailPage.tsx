@@ -31,12 +31,24 @@ export const NewsDetailPage = () => {
   const [news, setNews] = useState<AdaptedNews | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // ✅ CORREGIDO: Usamos async/await y tipado explícito para evitar 'any'
   useEffect(() => {
-    getNoticiasDelDia().then(data => {
-      const found = data.find(n => n.id === id);
-      if (found) setNews(adaptNoticia(found));
-      setLoading(false);
-    });
+    const cargarNoticia = async () => {
+      try {
+        const data: Noticia[] = await getNoticiasActivas();
+        const found = data.find((n: Noticia) => n.id === id);
+        
+        if (found) {
+          setNews(adaptNoticia(found));
+        }
+      } catch (error) {
+        console.error('Error al cargar la noticia:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarNoticia();
   }, [id]);
 
   if (loading) {
@@ -47,7 +59,7 @@ export const NewsDetailPage = () => {
     return (
       <div className="py-12 text-center">
         <h2 className="text-2xl font-bold text-white mb-2">Noticia no encontrada</h2>
-        <p className="text-text-secondary mb-4">Es posible que la noticia haya expirado (regla de 24 horas).</p>
+        <p className="text-text-secondary mb-4">Es posible que la noticia haya expirado o no exista.</p>
         <button onClick={() => navigate('/noticias')} className="text-brand hover:underline">Volver a noticias</button>
       </div>
     );
@@ -94,7 +106,6 @@ export const NewsDetailPage = () => {
           </button>
         </div>
 
-        {/* Cuerpo del artículo (Placeholder hasta que se agregue campo 'contenido' a la BD) */}
         <div className="prose prose-invert prose-lg max-w-none text-text-secondary space-y-4">
           <p>{news.summary}</p>
           <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
