@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getPublicidadesActivas, type Publicidad } from '../../core/firebase/services';
 
 interface AdPopupProps {
@@ -20,7 +20,6 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
     cargarPublicidades();
   }, []);
 
-  // Auto-rotación cada 5 segundos si hay más de 1 publicidad
   useEffect(() => {
     if (publicidades.length > 1) {
       const interval = setInterval(() => {
@@ -34,7 +33,7 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
 
   const currentAd = publicidades[currentIndex];
 
-  const handleLinkClick = () => {
+  const handleVerMas = () => {
     if (currentAd.link) {
       window.open(currentAd.link, '_blank');
     }
@@ -53,20 +52,20 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
-      {/* Backdrop oscuro (clic para cerrar) */}
+      {/* Backdrop oscuro */}
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Contenedor del Modal: Optimizado para móviles (max-h, scroll, bordes redondeados solo arriba en móvil) */}
-      <div className="relative w-full sm:max-w-md max-h-[85vh] bg-dark-surface sm:border sm:border-dark-border sm:rounded-2xl rounded-t-2xl overflow-y-auto shadow-2xl animate-scale-in flex flex-col">
+      {/* ✅ MODAL COMPACTO: Menos invasivo, imagen protagonista */}
+      <div className="relative w-full sm:max-w-sm max-h-[70vh] bg-dark-surface sm:border sm:border-dark-border sm:rounded-2xl rounded-t-2xl overflow-hidden shadow-2xl animate-scale-in flex flex-col">
         
-        {/* ✅ ETIQUETA PEQUEÑA Y CENTRADA */}
+        {/* Etiqueta pequeña y centrada */}
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20">
           <span className="px-2 py-0.5 bg-brand/20 text-brand text-[10px] font-bold uppercase tracking-widest rounded-full border border-brand/30 backdrop-blur-md">
             Publicidad {publicidades.length > 1 && `(${currentIndex + 1}/${publicidades.length})`}
           </span>
         </div>
 
-        {/* ✅ BOTÓN X PARA CERRAR (Más grande y accesible en móvil) */}
+        {/* Botón X para cerrar */}
         <button
           onClick={onClose}
           className="absolute top-3 right-3 z-20 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-sm transition-colors"
@@ -75,15 +74,15 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
           <X className="w-5 h-5" />
         </button>
 
-        {/* Imagen de la publicidad con altura máxima controlada */}
-        <div className="relative w-full max-h-[45vh] bg-dark-bg group flex-shrink-0">
+        {/* Imagen protagonista con altura controlada */}
+        <div className="relative w-full aspect-[4/3] bg-dark-bg group flex-shrink-0">
           <img
             src={currentAd.imagenUrl}
             alt={currentAd.titulo}
             className="w-full h-full object-cover"
           />
           
-          {/* Flechas de navegación (solo visibles si hay más de 1 y en hover/touch) */}
+          {/* Flechas de navegación */}
           {publicidades.length > 1 && (
             <>
               <button 
@@ -104,34 +103,33 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
           )}
         </div>
 
-        {/* Contenido con padding responsivo */}
-        <div className="p-4 sm:p-5 text-center space-y-3 sm:space-y-4 flex-1">
-          <h3 className="text-lg sm:text-xl font-bold text-white leading-tight">
+        {/* Contenido compacto: título + descripción truncada + botón "Ver más" */}
+        <div className="p-4 text-center space-y-2 flex-1">
+          <h3 className="text-base font-bold text-white leading-tight line-clamp-1">
             {currentAd.titulo}
           </h3>
-          <p className="text-sm text-text-secondary leading-relaxed">
+          <p className="text-sm text-text-secondary leading-relaxed line-clamp-2">
             {currentAd.descripcion}
           </p>
 
           {currentAd.link && (
             <button
-              onClick={handleLinkClick}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-brand hover:bg-brand-light text-white font-semibold transition-colors text-sm sm:text-base"
+              onClick={handleVerMas}
+              className="w-full mt-2 px-4 py-2.5 rounded-lg bg-brand hover:bg-brand-light text-white font-semibold transition-colors text-sm"
             >
-              Conocer más
-              <ExternalLink className="w-4 h-4" />
+              Ver más
             </button>
           )}
 
-          {/* Indicadores de puntos (Dots) */}
+          {/* Indicadores de puntos */}
           {publicidades.length > 1 && (
-            <div className="flex justify-center gap-2 pt-2 pb-1">
+            <div className="flex justify-center gap-2 pt-2">
               {publicidades.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentIndex(idx)}
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    idx === currentIndex ? 'bg-brand w-6' : 'bg-white/30 hover:bg-white/50 w-2'
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    idx === currentIndex ? 'bg-brand w-5' : 'bg-white/30 hover:bg-white/50 w-1.5'
                   }`}
                   aria-label={`Ir a publicidad ${idx + 1}`}
                 />
