@@ -9,6 +9,7 @@ import { useState, useRef, useEffect } from 'react';
 import { solicitarPermisoNotificaciones } from '../../core/firebase/services';
 
 import { InstallAppButton } from '../../components/InstallAppButton';
+import { AdPopup } from '../components/AdPopup';
 
 const STREAM_URL = "https://streams.radio.co/sf25c76934/listen";
 const WHATSAPP_URL = "https://wa.me/573151615474?text=" + encodeURIComponent("Hola La Poderosa, quiero más información");
@@ -16,6 +17,9 @@ const WHATSAPP_URL = "https://wa.me/573151615474?text=" + encodeURIComponent("Ho
 export const MainLayout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+
+  // ✅ ESTADO PARA EL POPUP DE PUBLICIDAD (Siempre true al montar el componente)
+  const [showAdPopup, setShowAdPopup] = useState(true);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -37,7 +41,7 @@ export const MainLayout = () => {
     }
   }, [isMuted]);
 
-    // ✅ Solicitar permiso de notificaciones al entrar al sitio (una sola vez)
+  // ✅ Solicitar permiso de notificaciones al entrar al sitio (una sola vez)
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
       const timer = setTimeout(() => {
@@ -263,6 +267,9 @@ export const MainLayout = () => {
           </div>
         </nav>
       </div>
+
+      {/* ✅ POPUP DE PUBLICIDAD (Se muestra siempre al montar el layout) */}
+      {showAdPopup && <AdPopup onClose={() => setShowAdPopup(false)} />}
     </div>
   );
 };

@@ -22,6 +22,8 @@ import {
 } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getMessaging, getToken } from 'firebase/messaging';
+import app from './config';
 
 const TENANT_ID = 'la-poderosa-4b6ab'; 
 
@@ -45,7 +47,7 @@ export interface ProgramaRadio {
   dias: string[];
   horaInicio: string;
   horaFin: string;
-  imagenUrl?: string; // ✅ NUEVO: Imagen personalizada del programa
+  imagenUrl?: string;
   tenantId: string;
   createdAt: Timestamp;
 }
@@ -92,7 +94,6 @@ export const getProgramasRadio = async (): Promise<ProgramaRadio[]> => {
   return programas.sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
 };
 
-// ✅ NUEVO: Función para editar un programa existente (para agregar/cambiar imagen)
 export const updateProgramaRadio = async (programaId: string, data: Partial<ProgramaRadio>) => {
   await updateDoc(doc(db, 'programas_radio', programaId), data);
 };
@@ -212,6 +213,7 @@ export interface Noticia {
   categoria: string;
   imagenUrl: string;
   fecha: Timestamp;
+  fechaExpiracion?: Timestamp;
   tenantId: string;
 }
 
@@ -249,17 +251,27 @@ export const addNoticia = async (noticiaData: Omit<Noticia, 'id' | 'tenantId' | 
   return docRef.id;
 };
 
-export const getNoticiasDelDia = async (): Promise<Noticia[]> => {
+export const getNoticiasActivas = async (): Promise<Noticia[]> => {
   const q = query(collection(db, 'noticias'), where('tenantId', '==', TENANT_ID));
   const snapshot = await getDocs(q);
   const noticias = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Noticia));
   
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
+  const ahora = Date.now();
   
   return noticias
-    .filter(n => n.fecha.toMillis() >= hoy.getTime())
+    .filter(n => {
+      if (!n.fechaExpiracion) return true;
+      return n.fechaExpiracion.toMillis() > ahora;
+    })
     .sort((a, b) => b.fecha.toMillis() - a.fecha.toMillis());
+};
+
+export const getAllNoticias = async (): Promise<Noticia[]> => {
+  const q = query(collection(db, 'noticias'), where('tenantId', '==', TENANT_ID));
+  const snapshot = await getDocs(q);
+  const noticias = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Noticia));
+  
+  return noticias.sort((a, b) => b.fecha.toMillis() - a.fecha.toMillis());
 };
 
 export const deleteNoticia = async (noticiaId: string) => {
@@ -314,7 +326,6 @@ export const uploadImagenPodcast = async (archivo: File): Promise<string> => {
   return urlDescarga;
 };
 
-// ✅ NUEVO: Función para subir imagen de Programa de Radio
 export const uploadImagenPrograma = async (archivo: File): Promise<string> => {
   const nombreArchivo = `programas/${Date.now()}_${archivo.name}`;
   const storageRef = ref(storage, nombreArchivo);
@@ -349,7 +360,7 @@ export const updateTvUrl = async (youtubeUrl: string) => {
 };
 
 // ==========================================
-// FUNCIONES PARA PUBLICIDAD
+// FUNCIONES PARA PUBLICIDAD / ANUNCIOS
 // ==========================================
 export interface Anuncio {
   id: string;
@@ -426,7 +437,7 @@ export const getEstadisticasInstalaciones = async (): Promise<Instalacion[]> => 
 };
 
 // ==========================================
-// FUNCIONES PARA ALIADOS (Transformado de Galerías)
+// FUNCIONES PARA ALIADOS
 // ==========================================
 export interface Aliado {
   id: string;
@@ -473,23 +484,17 @@ export const uploadImagenAliado = async (archivo: File): Promise<string> => {
 // ==========================================
 // FUNCIONES PARA NOTIFICACIONES PUSH (FCM)
 // ==========================================
-import { getMessaging, getToken } from 'firebase/messaging';
-import  app  from './config';
-
 const messaging = getMessaging(app);
 const VAPID_KEY = 'BC4NfyTTMfvZtsShIsbXgkVXvaurDHopulWwD9uv7yzQ9WrNEYNlhxrMr89YniUrrUSdacHJWxpjPVz-PZqZdhM';
 
 export const solicitarPermisoNotificaciones = async () => {
   try {
-    // 1. Pedir permiso al navegador
     const permission = await Notification.requestPermission();
     
     if (permission === 'granted') {
-      // 2. Obtener el token único del dispositivo
       const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
 
       if (currentToken) {
-        // 3. Guardar el token en Firestore para poder enviarle notificaciones después
         await addDoc(collection(db, 'tokens_notificaciones'), {
           token: currentToken,
           fecha: Timestamp.now(),
@@ -509,4 +514,46 @@ export const solicitarPermisoNotificaciones = async () => {
     console.error('Error al obtener permiso de notificación:', error);
     return false;
   }
+};
+
+// ==========================================
+// ✅ FUNCIONES PARA EL CARRUSEL DE PUBLICIDAD
+// ==========================================
+export interface Publicidad {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  imagenUrl: string;
+  link: string;
+  activa: boolean;
+  tenantId: string;
+}
+
+export const getPublicidadesActivas = async (): Promise<Publicidad[]> => {
+  const q = query(
+    collection(db, 'anuncios'), 
+    where('tenantId', '==', TENANT_ID),
+    where('activo', '==', true)
+  );
+  const snapshot = await getDocs(q);
+  
+  if (snapshot.empty) {
+    console.log('⚠️ No hay publicidad activa en la base de datos.');
+    return [];
+  }
+  
+  // ✅ CORREGIDO: Sin 'any'. Usamos la interfaz 'Anuncio' que ya está definida en este archivo.
+  return snapshot.docs.map(doc => {
+    const data = doc.data() as Anuncio; 
+    
+    return { 
+      id: doc.id, 
+      titulo: data.titulo || 'Publicidad',
+      descripcion: data.descripcion || data.empresa || '',
+      imagenUrl: data.imagenUrl,
+      link: data.enlaceUrl || '',
+      activa: data.activo,
+      tenantId: data.tenantId
+    };
+  });
 };

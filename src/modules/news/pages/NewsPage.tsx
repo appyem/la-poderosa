@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, Loader2, X, Calendar, User as UserIcon, Share2 } from 'lucide-react';
-import { getNoticiasDelDia, type Noticia } from '../../../core/firebase/services';
+import { getNoticiasActivas, type Noticia } from '../../../core/firebase/services';
 import { Timestamp } from 'firebase/firestore';
 
 export const NewsPage = () => {
@@ -12,7 +12,7 @@ export const NewsPage = () => {
   const cargarNoticias = async () => {
     setLoading(true);
     try {
-      const data = await getNoticiasDelDia();
+      const data = await getNoticiasActivas(); // ✅ CAMBIO AQUÍ
       setNoticias(data);
     } catch (error) {
       console.error('Error al cargar noticias:', error);
@@ -50,12 +50,9 @@ export const NewsPage = () => {
     });
   };
 
-  // ✅ FUNCIÓN PARA COMPARTIR EN WHATSAPP NATIVO
   const handleCompartirWhatsApp = (noticia: Noticia) => {
     const url = `${window.location.origin}/noticias`;
     const mensaje = `¡Hola! 👋 Te invito a leer esta noticia importante de *LA PODEROSA*:\n\n📰 *${noticia.titulo}*\n\n🔗 Entra aquí para leerla completa: ${url}\n\n📲 ¡Descarga nuestra aplicación para no perderte nada!`;
-    
-    // Este enlace fuerza la apertura de la app nativa de WhatsApp en móviles
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -79,9 +76,8 @@ export const NewsPage = () => {
 
   return (
     <div className="space-y-8 py-6">
-      {/* Header */}
       <div className="space-y-4">
-        <h1 className="text-3xl font-bold text-white">Noticias del Día</h1>
+        <h1 className="text-3xl font-bold text-white">Últimas Noticias</h1>
         <p className="text-text-secondary">Mantente informado con las últimas novedades.</p>
 
         <div className="relative max-w-xl">
@@ -99,12 +95,11 @@ export const NewsPage = () => {
       {noticiasFiltradas.length === 0 ? (
         <div className="text-center py-12 bg-dark-surface rounded-xl border border-dark-border">
           <p className="text-text-secondary text-lg">
-            {busqueda ? 'No se encontraron noticias con esa búsqueda.' : 'No hay noticias publicadas hoy.'}
+            {busqueda ? 'No se encontraron noticias con esa búsqueda.' : 'No hay noticias activas publicadas.'}
           </p>
         </div>
       ) : (
         <>
-          {/* Noticia Destacada */}
           {featuredNews && (
             <article
               onClick={() => setNoticiaSeleccionada(featuredNews)}
@@ -147,7 +142,6 @@ export const NewsPage = () => {
             </article>
           )}
 
-          {/* Grid de Noticias */}
           {otherNews.length > 0 && (
             <div className="space-y-4">
               <h2 className="text-xl font-bold text-white">Más recientes</h2>
@@ -195,14 +189,12 @@ export const NewsPage = () => {
         </>
       )}
 
-      {/* ================= MODAL DE NOTICIA COMPLETA ================= */}
       {noticiaSeleccionada && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in"
           onClick={() => setNoticiaSeleccionada(null)}
         >
           <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
-
           <div
             className="relative w-full max-w-4xl max-h-[90vh] bg-dark-surface border border-dark-border rounded-2xl overflow-hidden shadow-2xl animate-scale-in flex flex-col"
             onClick={(e) => e.stopPropagation()}
@@ -251,7 +243,6 @@ export const NewsPage = () => {
                   </p>
                 </div>
 
-                {/* ✅ BOTONES DE ACCIÓN (WhatsApp y Cerrar) */}
                 <div className="mt-6 md:mt-8 pt-5 md:pt-6 border-t border-dark-border flex flex-col sm:flex-row gap-3 justify-end">
                   <button
                     onClick={() => handleCompartirWhatsApp(noticiaSeleccionada)}

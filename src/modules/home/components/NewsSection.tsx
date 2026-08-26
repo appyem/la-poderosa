@@ -1,22 +1,37 @@
 import { useState, useEffect } from 'react';
 import { Newspaper, Loader2, X, Calendar, User as UserIcon, Share2 } from 'lucide-react';
-import { getNoticiasDelDia, type Noticia } from '../../../core/firebase/services';
+import { getNoticiasActivas, type Noticia } from '../../../core/firebase/services';
+import { Timestamp } from 'firebase/firestore';
 
 export const NewsSection = () => {
   const [noticias, setNoticias] = useState<Noticia[]>([]);
   const [loading, setLoading] = useState(true);
   const [noticiaSeleccionada, setNoticiaSeleccionada] = useState<Noticia | null>(null);
 
+  // ✅ SOLUCIÓN DEFINITIVA: async/await con isMounted para evitar errores de linter y tipos 'any'
   useEffect(() => {
-    getNoticiasDelDia()
-      .then((data) => {
-        setNoticias(data);
-        setLoading(false);
-      })
-      .catch((error) => {
+    let isMounted = true;
+
+    const cargarNoticias = async () => {
+      try {
+        const data = await getNoticiasActivas(); // ✅ Nombre de función corregido
+        if (isMounted) {
+          setNoticias(data);
+          setLoading(false);
+        }
+      } catch (error) {
         console.error('Error al cargar noticias:', error);
-        setLoading(false);
-      });
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    cargarNoticias();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Cerrar modal con tecla ESC
@@ -26,7 +41,7 @@ export const NewsSection = () => {
     };
     if (noticiaSeleccionada) {
       window.addEventListener('keydown', handleEsc);
-      document.body.style.overflow = 'hidden'; // Bloquea scroll del fondo
+      document.body.style.overflow = 'hidden';
     }
     return () => {
       window.removeEventListener('keydown', handleEsc);
@@ -34,7 +49,8 @@ export const NewsSection = () => {
     };
   }, [noticiaSeleccionada]);
 
-  const formatFecha = (timestamp: import('firebase/firestore').Timestamp) => {
+  // ✅ Tipo Timestamp importado correctamente
+  const formatFecha = (timestamp: Timestamp) => {
     return timestamp.toDate().toLocaleDateString('es-ES', {
       day: 'numeric',
       month: 'long',
@@ -44,12 +60,10 @@ export const NewsSection = () => {
     });
   };
 
-  // ✅ FUNCIÓN PARA COMPARTIR EN WHATSAPP NATIVO
   const handleCompartirWhatsApp = (noticia: Noticia) => {
     const url = `${window.location.origin}/noticias`;
     const mensaje = `¡Hola! 👋 Te invito a leer esta noticia importante de *LA PODEROSA*:\n\n📰 *${noticia.titulo}*\n\n🔗 Entra aquí para leerla completa: ${url}\n\n📲 ¡Descarga nuestra aplicación para no perderte nada!`;
     
-    // Este enlace fuerza la apertura de la app nativa de WhatsApp en móviles
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -65,13 +79,13 @@ export const NewsSection = () => {
   return (
     <section className="py-12">
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-2xl md:text-3xl font-bold text-white">Noticias del Día</h2>
+        <h2 className="text-2xl md:text-3xl font-bold text-white">Últimas Noticias</h2>
         <Newspaper className="w-6 h-6 text-brand" />
       </div>
 
       {noticias.length === 0 ? (
         <p className="text-text-secondary text-center py-8 bg-dark-surface rounded-xl border border-dark-border">
-          No hay noticias publicadas hoy. ¡Vuelve más tarde!
+          No hay noticias activas publicadas. ¡Vuelve más tarde!
         </p>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -121,15 +135,12 @@ export const NewsSection = () => {
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in"
           onClick={() => setNoticiaSeleccionada(null)}
         >
-          {/* Backdrop oscuro con blur */}
           <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
 
-          {/* Contenido del Modal */}
           <div
             className="relative w-full max-w-4xl max-h-[90vh] bg-dark-surface border border-dark-border rounded-2xl overflow-hidden shadow-2xl animate-scale-in flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Botón de Cerrar */}
             <button
               onClick={() => setNoticiaSeleccionada(null)}
               className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-sm transition-colors"
@@ -138,9 +149,7 @@ export const NewsSection = () => {
               <X className="w-5 h-5" />
             </button>
 
-            {/* Scroll interno */}
             <div className="overflow-y-auto">
-              {/* Imagen Grande */}
               <div className="relative w-full aspect-[16/9] bg-black">
                 <img
                   src={noticiaSeleccionada.imagenUrl}
@@ -150,19 +159,15 @@ export const NewsSection = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-dark-surface via-transparent to-transparent" />
               </div>
 
-              {/* Contenido */}
               <div className="p-6 md:p-8 -mt-12 relative">
-                {/* Categoría */}
                 <span className="inline-block px-3 py-1 rounded-full bg-brand/20 text-brand text-xs font-bold uppercase mb-4">
                   {noticiaSeleccionada.categoria || 'General'}
                 </span>
 
-                {/* Título */}
                 <h2 className="text-2xl md:text-4xl font-bold text-white leading-tight mb-4">
                   {noticiaSeleccionada.titulo}
                 </h2>
 
-                {/* Metadata */}
                 <div className="flex flex-wrap items-center gap-4 text-sm text-text-secondary mb-6 pb-6 border-b border-dark-border">
                   <span className="flex items-center gap-2">
                     <UserIcon className="w-4 h-4 text-brand" />
@@ -174,14 +179,12 @@ export const NewsSection = () => {
                   </span>
                 </div>
 
-                {/* Resumen Completo */}
                 <div className="prose prose-invert max-w-none">
                   <p className="text-lg text-text-secondary leading-relaxed whitespace-pre-wrap">
                     {noticiaSeleccionada.resumen}
                   </p>
                 </div>
 
-                {/* ✅ BOTONES DE ACCIÓN (WhatsApp y Cerrar) */}
                 <div className="mt-8 pt-6 border-t border-dark-border flex flex-col sm:flex-row gap-3 justify-end">
                   <button
                     onClick={() => handleCompartirWhatsApp(noticiaSeleccionada)}

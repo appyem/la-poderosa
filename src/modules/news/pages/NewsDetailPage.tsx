@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Clock, Share2, ArrowLeft, Loader2 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getNoticiasDelDia, type Noticia } from '../../../core/firebase/services';
+import { getNoticiasActivas, type Noticia } from '../../../core/firebase/services';
 
 interface AdaptedNews {
   id: string;
