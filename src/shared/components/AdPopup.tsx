@@ -13,21 +13,19 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
 
   useEffect(() => {
     const cargarPublicidades = async () => {
-      console.log('🔍 Buscando publicidades activas en Firebase...');
       const data = await getPublicidadesActivas();
-      console.log('📢 Resultado de la búsqueda:', data);
       setPublicidades(data);
       setLoading(false);
     };
     cargarPublicidades();
   }, []);
 
-  // ✅ AUTO-ROTACIÓN: Cambia de publicidad cada 5 segundos si hay más de 1
+  // Auto-rotación cada 5 segundos si hay más de 1 publicidad
   useEffect(() => {
     if (publicidades.length > 1) {
       const interval = setInterval(() => {
         setCurrentIndex((prev) => (prev + 1) % publicidades.length);
-      }, 5000); // 5000 ms = 5 segundos
+      }, 5000);
       return () => clearInterval(interval);
     }
   }, [publicidades.length]);
@@ -54,38 +52,38 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in">
-      {/* Backdrop oscuro */}
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
+      {/* Backdrop oscuro (clic para cerrar) */}
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Contenedor del Modal */}
-      <div className="relative w-full max-w-md bg-dark-surface border border-dark-border rounded-2xl overflow-hidden shadow-2xl animate-scale-in">
+      {/* Contenedor del Modal: Optimizado para móviles (max-h, scroll, bordes redondeados solo arriba en móvil) */}
+      <div className="relative w-full sm:max-w-md max-h-[85vh] bg-dark-surface sm:border sm:border-dark-border sm:rounded-2xl rounded-t-2xl overflow-y-auto shadow-2xl animate-scale-in flex flex-col">
         
-        {/* ✅ ETIQUETA PEQUEÑA Y CENTRADA (Ahora muestra el contador) */}
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
+        {/* ✅ ETIQUETA PEQUEÑA Y CENTRADA */}
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20">
           <span className="px-2 py-0.5 bg-brand/20 text-brand text-[10px] font-bold uppercase tracking-widest rounded-full border border-brand/30 backdrop-blur-md">
             Publicidad {publicidades.length > 1 && `(${currentIndex + 1}/${publicidades.length})`}
           </span>
         </div>
 
-        {/* ✅ BOTÓN X PARA CERRAR */}
+        {/* ✅ BOTÓN X PARA CERRAR (Más grande y accesible en móvil) */}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-sm transition-colors"
+          className="absolute top-3 right-3 z-20 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-sm transition-colors"
           aria-label="Cerrar publicidad"
         >
-          <X className="w-4 h-4" />
+          <X className="w-5 h-5" />
         </button>
 
-        {/* Imagen de la publicidad con flechas de navegación */}
-        <div className="relative w-full aspect-video bg-dark-bg group">
+        {/* Imagen de la publicidad con altura máxima controlada */}
+        <div className="relative w-full max-h-[45vh] bg-dark-bg group flex-shrink-0">
           <img
             src={currentAd.imagenUrl}
             alt={currentAd.titulo}
-            className="w-full h-full object-cover transition-opacity duration-500"
+            className="w-full h-full object-cover"
           />
           
-          {/* Flechas (solo visibles si hay más de 1 publicidad y al pasar el mouse) */}
+          {/* Flechas de navegación (solo visibles si hay más de 1 y en hover/touch) */}
           {publicidades.length > 1 && (
             <>
               <button 
@@ -106,28 +104,28 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
           )}
         </div>
 
-        {/* Contenido */}
-        <div className="p-5 text-center space-y-4">
-          <h3 className="text-xl font-bold text-white leading-tight transition-all duration-300">
+        {/* Contenido con padding responsivo */}
+        <div className="p-4 sm:p-5 text-center space-y-3 sm:space-y-4 flex-1">
+          <h3 className="text-lg sm:text-xl font-bold text-white leading-tight">
             {currentAd.titulo}
           </h3>
-          <p className="text-sm text-text-secondary leading-relaxed transition-all duration-300">
+          <p className="text-sm text-text-secondary leading-relaxed">
             {currentAd.descripcion}
           </p>
 
           {currentAd.link && (
             <button
               onClick={handleLinkClick}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-brand hover:bg-brand-light text-white font-semibold transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-brand hover:bg-brand-light text-white font-semibold transition-colors text-sm sm:text-base"
             >
               Conocer más
               <ExternalLink className="w-4 h-4" />
             </button>
           )}
 
-          {/* ✅ INDICADORES DE PUNTOS (Dots) */}
+          {/* Indicadores de puntos (Dots) */}
           {publicidades.length > 1 && (
-            <div className="flex justify-center gap-2 pt-2">
+            <div className="flex justify-center gap-2 pt-2 pb-1">
               {publicidades.map((_, idx) => (
                 <button
                   key={idx}
