@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { getPublicidadesActivas, type Publicidad } from '../../core/firebase/services';
 
 interface AdPopupProps {
@@ -10,6 +10,7 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
   const [publicidades, setPublicidades] = useState<Publicidad[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false); // ✅ Controla vista compacta vs expandida
 
   useEffect(() => {
     const cargarPublicidades = async () => {
@@ -21,19 +22,23 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
   }, []);
 
   useEffect(() => {
-    if (publicidades.length > 1) {
+    if (publicidades.length > 1 && !expanded) {
       const interval = setInterval(() => {
         setCurrentIndex((prev) => (prev + 1) % publicidades.length);
       }, 5000);
       return () => clearInterval(interval);
     }
-  }, [publicidades.length]);
+  }, [publicidades.length, expanded]);
 
   if (loading || publicidades.length === 0) return null;
 
   const currentAd = publicidades[currentIndex];
 
   const handleVerMas = () => {
+    setExpanded(true);
+  };
+
+  const handleIrAlSitio = () => {
     if (currentAd.link) {
       window.open(currentAd.link, '_blank');
     }
@@ -42,11 +47,13 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
 
   const nextAd = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setExpanded(false); // Volver a vista compacta al cambiar
     setCurrentIndex((prev) => (prev + 1) % publicidades.length);
   };
 
   const prevAd = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setExpanded(false); // Volver a vista compacta al cambiar
     setCurrentIndex((prev) => (prev - 1 + publicidades.length) % publicidades.length);
   };
 
@@ -55,7 +62,7 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
       {/* Backdrop oscuro */}
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
 
-      {/* ✅ MODAL COMPACTO: Menos invasivo, imagen protagonista */}
+      {/* Modal */}
       <div className="relative w-full sm:max-w-sm max-h-[70vh] bg-dark-surface sm:border sm:border-dark-border sm:rounded-2xl rounded-t-2xl overflow-hidden shadow-2xl animate-scale-in flex flex-col">
         
         {/* Etiqueta pequeña y centrada */}
@@ -74,7 +81,7 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
           <X className="w-5 h-5" />
         </button>
 
-        {/* Imagen protagonista con altura controlada */}
+        {/* Imagen */}
         <div className="relative w-full aspect-[4/3] bg-dark-bg group flex-shrink-0">
           <img
             src={currentAd.imagenUrl}
@@ -103,22 +110,38 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
           )}
         </div>
 
-        {/* Contenido compacto: título + descripción truncada + botón "Ver más" */}
-        <div className="p-4 text-center space-y-2 flex-1">
-          <h3 className="text-base font-bold text-white leading-tight line-clamp-1">
+        {/* Contenido: Vista compacta o expandida */}
+        <div className="p-4 text-center space-y-2 flex-1 overflow-y-auto">
+          {/* Título */}
+          <h3 className={`font-bold text-white leading-tight ${expanded ? '' : 'line-clamp-1'}`}>
             {currentAd.titulo}
           </h3>
-          <p className="text-sm text-text-secondary leading-relaxed line-clamp-2">
+          
+          {/* Descripción */}
+          <p className={`text-sm text-text-secondary leading-relaxed ${expanded ? '' : 'line-clamp-2'}`}>
             {currentAd.descripcion}
           </p>
 
-          {currentAd.link && (
+          {/* Botones condicionales */}
+          {!expanded ? (
+            // Vista compacta: Botón "Ver más"
             <button
               onClick={handleVerMas}
               className="w-full mt-2 px-4 py-2.5 rounded-lg bg-brand hover:bg-brand-light text-white font-semibold transition-colors text-sm"
             >
               Ver más
             </button>
+          ) : (
+            // Vista expandida: Botón "Ir al sitio" (solo si hay link)
+            currentAd.link && (
+              <button
+                onClick={handleIrAlSitio}
+                className="w-full mt-2 px-4 py-2.5 rounded-lg bg-brand hover:bg-brand-light text-white font-semibold transition-colors text-sm flex items-center justify-center gap-2"
+              >
+                Ir al sitio
+                <ExternalLink className="w-4 h-4" />
+              </button>
+            )
           )}
 
           {/* Indicadores de puntos */}
@@ -127,7 +150,10 @@ export const AdPopup = ({ onClose }: AdPopupProps) => {
               {publicidades.map((_, idx) => (
                 <button
                   key={idx}
-                  onClick={() => setCurrentIndex(idx)}
+                  onClick={() => {
+                    setExpanded(false);
+                    setCurrentIndex(idx);
+                  }}
                   className={`h-1.5 rounded-full transition-all duration-300 ${
                     idx === currentIndex ? 'bg-brand w-5' : 'bg-white/30 hover:bg-white/50 w-1.5'
                   }`}
