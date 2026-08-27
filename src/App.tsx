@@ -28,8 +28,8 @@ import { StreamingPage } from './modules/dashboard/pages/StreamingPage';
 import { PublicidadPage } from './modules/dashboard/pages/PublicidadPage';
 import { AnaliticasPage } from './modules/dashboard/pages/AnaliticasPage';
 import { AliadosPage } from './modules/dashboard/pages/AliadosPage';
-// ✅ IMPORTACIÓN DE LA PÁGINA DE NOTIFICACIONES
 import { NotificacionesPage } from './modules/dashboard/pages/NotificacionesPage';
+import { TarjetaPage } from './modules/contact/pages/TarjetaPage';
 
 const Placeholder = ({ title }: { title: string }) => (
   <div className="flex items-center justify-center min-h-[60vh]">
@@ -54,7 +54,11 @@ function App() {
     <BrowserRouter>
       <SplashScreen />
       <Routes>
-        {/* Rutas Públicas */}
+        {/* ✅ RUTAS INDEPENDIENTES (Sin layout principal) */}
+        <Route path="/tarjeta" element={<TarjetaPage />} />
+        <Route path="/login" element={<LoginPage />} />
+
+        {/* Rutas Públicas con Layout Principal */}
         <Route path="/" element={<MainLayout />}>
           <Route index element={<HomePage />} />
           <Route path="emisora" element={<RadioPage />} />
@@ -73,9 +77,6 @@ function App() {
           <Route path="*" element={<Placeholder title="Página no encontrada" />} />
         </Route>
 
-        {/* Ruta pública de Login */}
-        <Route path="/login" element={<LoginPage />} />
-
         {/* Rutas protegidas del Panel de Administrador */}
         <Route 
           path="/dashboard" 
@@ -93,10 +94,7 @@ function App() {
           <Route path="streaming" element={<StreamingPage />} />
           <Route path="publicidad" element={<PublicidadPage />} />
           <Route path="analiticas" element={<AnaliticasPage />} />
-          
-          {/* ✅ RUTA DE NOTIFICACIONES CORRECTAMENTE ANIDADA DENTRO DE /DASHBOARD */}
           <Route path="notificaciones" element={<NotificacionesPage />} />
-          
           <Route path="aliados" element={<AliadosPage />} />
           <Route path="ia" element={<Placeholder title="Herramientas IA" />} />
           <Route path="configuracion" element={<Placeholder title="Configuración" />} />

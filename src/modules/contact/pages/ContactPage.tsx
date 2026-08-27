@@ -33,7 +33,7 @@ export const ContactPage = () => {
       icon: MessageCircle,
       color: 'text-green-500',
       bg: 'bg-green-500/10',
-      handle: '315 161 5474',
+      handle: '322 702 7174',
     },
   ];
 
@@ -88,8 +88,8 @@ export const ContactPage = () => {
                 </div>
                 <div>
                   <p className="font-semibold text-white">Teléfono / WhatsApp</p>
-                  <a href="https://wa.me/573151615474" target="_blank" rel="noopener noreferrer" className="text-sm text-text-secondary hover:text-brand transition-colors">
-                    +57 315 161 5474
+                  <a href="https://wa.me/573227027174" target="_blank" rel="noopener noreferrer" className="text-sm text-text-secondary hover:text-brand transition-colors">
+                    +57 322 702 7174
                   </a>
                 </div>
               </div>

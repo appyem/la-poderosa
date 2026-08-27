@@ -12,7 +12,7 @@ import { InstallAppButton } from '../../components/InstallAppButton';
 import { AdPopup } from '../components/AdPopup';
 
 const STREAM_URL = "https://streams.radio.co/sf25c76934/listen";
-const WHATSAPP_URL = "https://wa.me/573151615474?text=" + encodeURIComponent("Hola La Poderosa, quiero más información");
+const WHATSAPP_URL = "https://wa.me/573227027174?text=" + encodeURIComponent("Hola La Poderosa, quiero más información");
 
 export const MainLayout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
