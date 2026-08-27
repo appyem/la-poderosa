@@ -42,22 +42,24 @@ export const TarjetaPage = () => {
   };
 
   const handleShareWhatsApp = () => {
-    const text = `☕ *${datos.nombre}*\n"${datos.eslogan}"\n\n📞 ${datos.telefono}\n📧 ${datos.email}\n📍 ${datos.direccion}\n\n${currentUrl}`;
+    // ✅ MENSAJE ESPECÍFICO PARA LA TARJETA
+    const text = `📇 *Tarjeta de Presentación Digital*\n\n${datos.nombre}\n"${datos.eslogan}"\n\n📱 Accede a todos nuestros contactos y redes sociales aquí:\n${currentUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   return (
-    <div className="h-screen w-screen bg-neutral-950 flex items-center justify-center p-3 relative overflow-hidden">
+    // ✅ PANTALLA COMPLETA SIN PADDING
+    <div className="h-screen w-screen bg-neutral-950 flex items-center justify-center relative overflow-hidden">
       {/* Resplandor ambiental */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-amber-600/5 rounded-full blur-[150px] pointer-events-none" />
 
-      {/* Tarjeta Compacta */}
-      <div className="relative w-full max-w-sm bg-neutral-900/80 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/10 overflow-hidden">
+      {/* Tarjeta Compacta - OCUPA TODA LA PANTALLA */}
+      <div className="w-full h-full bg-neutral-900/80 backdrop-blur-2xl overflow-hidden relative">
         
-        {/* ✅ MARCA DE AGUA DENTRO DE LA TARJETA CON MODULACIÓN VISIBLE */}
+        {/* MARCA DE AGUA DENTRO DE LA TARJETA CON MODULACIÓN VISIBLE */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
           <div className="relative">
-            {/* ✅ ONDAS DE MODULACIÓN DEL FONDO (3 ondas concéntricas visibles) */}
+            {/* Ondas de modulación del fondo */}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-[280px] h-[280px] rounded-full border-2 border-amber-500/20 animate-ping-bg-1" />
             </div>
@@ -77,10 +79,10 @@ export const TarjetaPage = () => {
           </div>
         </div>
 
-        {/* Contenido de la tarjeta (por encima de la marca de agua) */}
-        <div className="relative z-10">
+        {/* Contenido de la tarjeta */}
+        <div className="relative z-10 h-full flex flex-col">
           {/* Header con Logo Modulando */}
-          <div className="relative pt-6 pb-4 px-6 text-center">
+          <div className="relative pt-8 pb-4 px-6 text-center flex-shrink-0">
             <div className="relative inline-block">
               {/* Ondas de modulación del logo principal */}
               <div className="absolute inset-0 flex items-center justify-center">
@@ -111,217 +113,135 @@ export const TarjetaPage = () => {
             </p>
           </div>
 
-          {/* Botones de Acción */}
-          <div className="px-4 pb-3 flex gap-2">
-            <button
-              onClick={handleCopyLink}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-medium transition-all active:scale-95 backdrop-blur-sm"
-            >
-              {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-              {copied ? '¡Copiado!' : 'Copiar'}
-            </button>
-            <button
-              onClick={handleShareWhatsApp}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-green-600/90 hover:bg-green-500 text-white text-xs font-medium transition-all active:scale-95 backdrop-blur-sm"
-            >
-              <Share2 className="w-3.5 h-3.5" />
-              Compartir
-            </button>
-          </div>
+          {/* Contenido principal - Se expande para llenar el espacio */}
+          <div className="flex-1 flex flex-col justify-center px-4 py-4 space-y-4">
+            {/* Botones de Acción */}
+            <div className="flex gap-2">
+              <button
+                onClick={handleCopyLink}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-medium transition-all active:scale-95 backdrop-blur-sm"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? '¡Copiado!' : 'Copiar'}
+              </button>
+              <button
+                onClick={handleShareWhatsApp}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-green-600/90 hover:bg-green-500 text-white text-xs font-medium transition-all active:scale-95 backdrop-blur-sm"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                Compartir
+              </button>
+            </div>
 
-          {/* Contacto Compacto */}
-          <div className="px-4 pb-3 space-y-2">
-            <a href={`tel:${datos.telefono.replace(/\s/g, '')}`} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-all backdrop-blur-sm">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                <Phone className="w-4 h-4 text-blue-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[9px] text-neutral-500 uppercase tracking-wider font-semibold">Llamar</p>
-                <p className="text-neutral-200 text-xs font-medium truncate">{datos.telefono}</p>
-              </div>
-            </a>
+            {/* Contacto Compacto */}
+            <div className="space-y-2">
+              <a href={`tel:${datos.telefono.replace(/\s/g, '')}`} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 transition-all backdrop-blur-sm">
+                <div className="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                  <Phone className="w-4 h-4 text-blue-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] text-neutral-500 uppercase tracking-wider font-semibold">Llamar</p>
+                  <p className="text-neutral-200 text-xs font-medium truncate">{datos.telefono}</p>
+                </div>
+              </a>
 
-            <a href={`mailto:${datos.email}`} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-all backdrop-blur-sm">
-              <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-                <Mail className="w-4 h-4 text-amber-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[9px] text-neutral-500 uppercase tracking-wider font-semibold">Correo</p>
-                <p className="text-neutral-200 text-xs font-medium truncate">{datos.email}</p>
-              </div>
-            </a>
+              <a href={`mailto:${datos.email}`} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 transition-all backdrop-blur-sm">
+                <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                  <Mail className="w-4 h-4 text-amber-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] text-neutral-500 uppercase tracking-wider font-semibold">Correo</p>
+                  <p className="text-neutral-200 text-xs font-medium truncate">{datos.email}</p>
+                </div>
+              </a>
 
-            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(datos.direccion)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-all backdrop-blur-sm">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                <MapPin className="w-4 h-4 text-emerald-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[9px] text-neutral-500 uppercase tracking-wider font-semibold">Ubicación</p>
-                <p className="text-neutral-200 text-xs font-medium truncate">{datos.direccion}</p>
-              </div>
-            </a>
-          </div>
+              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(datos.direccion)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 transition-all backdrop-blur-sm">
+                <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] text-neutral-500 uppercase tracking-wider font-semibold">Ubicación</p>
+                  <p className="text-neutral-200 text-xs font-medium truncate">{datos.direccion}</p>
+                </div>
+              </a>
+            </div>
 
-          {/* Redes Sociales Grid Compacto */}
-          <div className="px-4 pb-4">
+            {/* Redes Sociales Grid Compacto */}
             <div className="grid grid-cols-4 gap-2">
-              <a href="https://www.instagram.com/lapoderosadelcafe/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-purple-600/20 to-pink-600/20 border border-white/5 hover:border-pink-500/30 transition-all backdrop-blur-sm">
+              <a href="https://www.instagram.com/lapoderosadelcafe/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-gradient-to-br from-purple-600/20 to-pink-600/20 border border-white/5 hover:border-pink-500/30 transition-all backdrop-blur-sm">
                 <InstagramIcon />
               </a>
-              <a href="https://www.facebook.com/lapoderosadelcafe" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center p-2 rounded-xl bg-blue-600/10 border border-white/5 hover:border-blue-500/30 transition-all backdrop-blur-sm">
+              <a href="https://www.facebook.com/lapoderosadelcafe" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-blue-600/10 border border-white/5 hover:border-blue-500/30 transition-all backdrop-blur-sm">
                 <FacebookIcon />
               </a>
-              <a href="https://www.tiktok.com/@poderazadelcafe104" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center p-2 rounded-xl bg-neutral-800/50 border border-white/5 hover:border-white/20 transition-all backdrop-blur-sm">
+              <a href="https://www.tiktok.com/@poderazadelcafe104" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-neutral-800/50 border border-white/5 hover:border-white/20 transition-all backdrop-blur-sm">
                 <TikTokIcon />
               </a>
-              <a href="https://www.youtube.com/@LaPoderosadelCaf%C3%A9" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center p-2 rounded-xl bg-red-600/10 border border-white/5 hover:border-red-500/30 transition-all backdrop-blur-sm">
+              <a href="https://www.youtube.com/@LaPoderosadelCaf%C3%A9" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-red-600/10 border border-white/5 hover:border-red-500/30 transition-all backdrop-blur-sm">
                 <YouTubeIcon />
               </a>
             </div>
           </div>
 
-          {/* Footer Minimalista */}
-          <div className="bg-black/30 px-4 py-2 text-center border-t border-white/5 backdrop-blur-sm">
-            <p className="text-[9px] text-neutral-600">
-              {datos.web}
-            </p>
+          {/* Footer Clickeable - Lleva a la página principal */}
+          <div className="bg-black/30 px-4 py-3 text-center border-t border-white/5 backdrop-blur-sm flex-shrink-0">
+            <a 
+              href="/" 
+              className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-amber-400 transition-colors"
+            >
+              🌐 {datos.web}
+            </a>
           </div>
         </div>
       </div>
 
-      {/* ESTILOS CSS PARA LAS ANIMACIONES DE MODULACIÓN */}
+      {/* ESTILOS CSS PARA LAS ANIMACIONES */}
       <style>{`
-        /* Ondas del logo principal */
         @keyframes ping-fast {
-          0% {
-            transform: scale(1);
-            opacity: 0.6;
-          }
-          100% {
-            transform: scale(1.8);
-            opacity: 0;
-          }
+          0% { transform: scale(1); opacity: 0.6; }
+          100% { transform: scale(1.8); opacity: 0; }
         }
         @keyframes ping-medium {
-          0% {
-            transform: scale(1);
-            opacity: 0.4;
-          }
-          100% {
-            transform: scale(2.2);
-            opacity: 0;
-          }
+          0% { transform: scale(1); opacity: 0.4; }
+          100% { transform: scale(2.2); opacity: 0; }
         }
         @keyframes ping-slow {
-          0% {
-            transform: scale(1);
-            opacity: 0.2;
-          }
-          100% {
-            transform: scale(2.6);
-            opacity: 0;
-          }
+          0% { transform: scale(1); opacity: 0.2; }
+          100% { transform: scale(2.6); opacity: 0; }
         }
-        
-        /* ✅ Ondas del logo de fondo (más visibles y dinámicas) */
         @keyframes ping-bg-1 {
-          0% {
-            transform: scale(1);
-            opacity: 0.3;
-          }
-          100% {
-            transform: scale(1.6);
-            opacity: 0;
-          }
+          0% { transform: scale(1); opacity: 0.3; }
+          100% { transform: scale(1.6); opacity: 0; }
         }
         @keyframes ping-bg-2 {
-          0% {
-            transform: scale(1);
-            opacity: 0.25;
-          }
-          100% {
-            transform: scale(1.9);
-            opacity: 0;
-          }
+          0% { transform: scale(1); opacity: 0.25; }
+          100% { transform: scale(1.9); opacity: 0; }
         }
         @keyframes ping-bg-3 {
-          0% {
-            transform: scale(1);
-            opacity: 0.2;
-          }
-          100% {
-            transform: scale(2.2);
-            opacity: 0;
-          }
+          0% { transform: scale(1); opacity: 0.2; }
+          100% { transform: scale(2.2); opacity: 0; }
         }
-        
-        /* Pulso del logo principal */
         @keyframes pulse-logo {
-          0%, 100% {
-            transform: scale(1);
-          }
-          50% {
-            transform: scale(1.05);
-          }
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
         }
-        
-        /* Resplandor del logo principal */
         @keyframes pulse-glow {
-          0%, 100% {
-            opacity: 0.2;
-          }
-          50% {
-            opacity: 0.4;
-          }
+          0%, 100% { opacity: 0.2; }
+          50% { opacity: 0.4; }
         }
-        
-        /* ✅ Pulso del logo de fondo (más visible) */
         @keyframes pulse-bg {
-          0%, 100% {
-            opacity: 0.4;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 0.5;
-            transform: scale(1.02);
-          }
+          0%, 100% { opacity: 0.4; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(1.02); }
         }
-        
-        /* Clases de animación */
-        .animate-ping-fast {
-          animation: ping-fast 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-        }
-        .animate-ping-medium {
-          animation: ping-medium 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-          animation-delay: 0.3s;
-        }
-        .animate-ping-slow {
-          animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-          animation-delay: 0.6s;
-        }
-        
-        /* ✅ Clases de animación del fondo */
-        .animate-ping-bg-1 {
-          animation: ping-bg-1 3s cubic-bezier(0, 0, 0.2, 1) infinite;
-        }
-        .animate-ping-bg-2 {
-          animation: ping-bg-2 3s cubic-bezier(0, 0, 0.2, 1) infinite;
-          animation-delay: 0.5s;
-        }
-        .animate-ping-bg-3 {
-          animation: ping-bg-3 3s cubic-bezier(0, 0, 0.2, 1) infinite;
-          animation-delay: 1s;
-        }
-        
-        .animate-pulse-logo {
-          animation: pulse-logo 3s ease-in-out infinite;
-        }
-        .animate-pulse-glow {
-          animation: pulse-glow 3s ease-in-out infinite;
-        }
-        .animate-pulse-bg {
-          animation: pulse-bg 3s ease-in-out infinite;
-        }
+        .animate-ping-fast { animation: ping-fast 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+        .animate-ping-medium { animation: ping-medium 2s cubic-bezier(0, 0, 0.2, 1) infinite; animation-delay: 0.3s; }
+        .animate-ping-slow { animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite; animation-delay: 0.6s; }
+        .animate-ping-bg-1 { animation: ping-bg-1 3s cubic-bezier(0, 0, 0.2, 1) infinite; }
+        .animate-ping-bg-2 { animation: ping-bg-2 3s cubic-bezier(0, 0, 0.2, 1) infinite; animation-delay: 0.5s; }
+        .animate-ping-bg-3 { animation: ping-bg-3 3s cubic-bezier(0, 0, 0.2, 1) infinite; animation-delay: 1s; }
+        .animate-pulse-logo { animation: pulse-logo 3s ease-in-out infinite; }
+        .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+        .animate-pulse-bg { animation: pulse-bg 3s ease-in-out infinite; }
       `}</style>
     </div>
   );
