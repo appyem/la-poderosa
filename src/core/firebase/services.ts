@@ -557,3 +557,400 @@ export const getPublicidadesActivas = async (): Promise<Publicidad[]> => {
     };
   });
 };
+
+// ==========================================
+// 🛒 TIENDA VIRTUAL "LA PODEROSA SHOP"
+// FASE 1: Definición de tipos de datos
+// ==========================================
+
+// ------------------------------------------
+// CATEGORÍAS DE PRODUCTOS
+// ------------------------------------------
+export interface Categoria {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  icono: string; // Emoji o nombre de icono (ej: "☕" o "coffee")
+  imagenUrl?: string; // Imagen de la categoría (opcional)
+  padreId?: string; // Para subcategorías. Si es undefined, es categoría principal
+  orden: number; // Para ordenar las categorías en el menú
+  activo: boolean;
+  tenantId: string;
+  createdAt: Timestamp;
+}
+
+// ------------------------------------------
+// PRODUCTOS
+// ------------------------------------------
+export interface Producto {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  descripcionCorta: string; // Máximo 150 caracteres para tarjetas
+  precio: number; // Precio actual en COP
+  precioAnterior?: number; // Para mostrar ofertas (precio tachado)
+  stock: number; // Cantidad disponible
+  sku?: string; // Código interno del producto (opcional)
+  categoriaId: string;
+  imagenes: string[]; // Array de URLs de imágenes (mínimo 1, máximo 5)
+  destacado: boolean; // Aparece en la sección "Destacados"
+  enOferta: boolean; // Aparece en la sección "Ofertas"
+  activo: boolean; // Disponible para comprar
+  fechaOfertaFin?: Timestamp; // Si tiene oferta, cuándo termina
+  pesoKg?: number; // Para calcular envíos futuros
+  tenantId: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+// ------------------------------------------
+// CLIENTES (Registro obligatorio tipo Rappi)
+// ------------------------------------------
+export interface DireccionCliente {
+  id: string;
+  etiqueta: string; // "Casa", "Trabajo", "Finca", etc.
+  direccion: string;
+  barrio?: string;
+  ciudad: string; // Por ahora solo ciudades de Caldas
+  departamento: string;
+  telefono: string;
+  esPrincipal: boolean;
+}
+
+export interface Cliente {
+  id: string; // Coincide con el UID de Firebase Auth
+  nombre: string;
+  apellido: string;
+  email: string;
+  telefono: string;
+  documentoTipo: 'cc' | 'ce' | 'nit'; // Cédula, Cédula Extranjería, NIT
+  documentoNumero: string;
+  direcciones: DireccionCliente[];
+  fechaNacimiento?: string; // Formato YYYY-MM-DD (opcional)
+  aceptaTerminos: boolean;
+  tenantId: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+// ------------------------------------------
+// PEDIDOS
+// ------------------------------------------
+export type EstadoPedido = 
+  | 'pendiente'      // Creado pero no pagado
+  | 'pagado'         // Pago confirmado por ePayco
+  | 'en_preparacion' // Admin está preparando el pedido
+  | 'enviado'        // En camino al cliente
+  | 'entregado'      // Entregado al cliente
+  | 'cancelado';     // Cancelado por cliente o admin
+
+export type MetodoPago = 'pse' | 'tarjeta' | 'nequi' | 'daviplata';
+
+export interface ItemPedido {
+  productoId: string;
+  titulo: string; // Snapshot del título al momento de comprar
+  precio: number; // Snapshot del precio al momento de comprar
+  cantidad: number;
+  imagenUrl: string; // Primera imagen del producto
+  subtotal: number; // precio * cantidad
+}
+
+export interface Pedido {
+  id: string;
+  clienteId: string;
+  clienteNombre: string; // Snapshot para evitar joins
+  clienteEmail: string;
+  clienteTelefono: string;
+  items: ItemPedido[];
+  subtotal: number; // Suma de items
+  costoEnvio: number; // Envío local Caldas
+  descuento: number; // Si aplicó cupón
+  total: number; // subtotal + envio - descuento
+  cuponCodigo?: string; // Código usado (si aplica)
+  estado: EstadoPedido;
+  metodoPago: MetodoPago;
+  transaccionId?: string; // ID de la transacción en ePayco
+  fechaPago?: Timestamp; // Cuándo se confirmó el pago
+  direccionEnvio: DireccionCliente; // Snapshot de la dirección
+  notas?: string; // Notas del cliente para el envío
+  numeroGuia?: string; // Número de guía del transportador
+  tenantId: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+// ------------------------------------------
+// CUPONES DE DESCUENTO
+// ------------------------------------------
+export type TipoCupon = 'porcentaje' | 'valor_fijo';
+
+export interface CuponDescuento {
+  id: string;
+  codigo: string; // Ej: "PODEROSA10" (siempre en mayúsculas)
+  tipo: TipoCupon;
+  valor: number; // Si es porcentaje: 10 (equivale a 10%). Si es valor: 10000 (COP)
+  valorMinimoCompra: number; // Compra mínima para aplicar el cupón
+  usosMaximos: number; // Cuántas veces se puede usar en total
+  usosActuales: number; // Cuántas veces se ha usado
+  usosPorCliente: number; // Cuántas veces puede usarlo un mismo cliente
+  fechaInicio: Timestamp;
+  fechaExpiracion: Timestamp;
+  activo: boolean;
+  tenantId: string;
+  createdAt: Timestamp;
+}
+
+// ------------------------------------------
+// CONFIGURACIÓN DE LA TIENDA (Documento único)
+// ------------------------------------------
+export interface ConfiguracionTienda {
+  id: string; // Siempre será 'config_tienda'
+  nombreTienda: string;
+  costoEnvioLocal: number; // Envío dentro de Caldas
+  envioGratisDesde: number; // Compra mínima para envío gratis
+  ciudadesDisponibles: string[]; // Ciudades de Caldas donde se entrega
+  whatsappPedidos: string; // WhatsApp para confirmar pedidos
+  emailPedidos: string; // Email para notificaciones
+  epaycoPublicKey?: string; // Llave pública de ePayco
+  tenantId: string;
+  updatedAt: Timestamp;
+}
+
+// ==========================================
+// FUNCIONES PARA CATEGORÍAS DE LA TIENDA
+// ==========================================
+
+/**
+ * Crea una nueva categoría o subcategoría
+ * @param categoriaData Datos de la categoría (sin id, tenantId ni createdAt)
+ * @returns El ID del documento creado
+ */
+export const addCategoria = async (
+  categoriaData: Omit<Categoria, 'id' | 'tenantId' | 'createdAt'>
+): Promise<string> => {
+  const docRef = await addDoc(collection(db, 'categorias'), {
+    ...categoriaData,
+    tenantId: TENANT_ID,
+    createdAt: Timestamp.now()
+  });
+  return docRef.id;
+};
+
+/**
+ * Obtiene TODAS las categorías (para el panel administrativo)
+ * Incluye activas e inactivas, ordenadas por el campo 'orden'
+ */
+export const getCategorias = async (): Promise<Categoria[]> => {
+  const q = query(
+    collection(db, 'categorias'), 
+    where('tenantId', '==', TENANT_ID)
+  );
+  const snapshot = await getDocs(q);
+  const categorias = snapshot.docs.map(
+    doc => ({ id: doc.id, ...doc.data() } as Categoria)
+  );
+  
+  // Ordenar por campo 'orden' ascendente, luego por fecha de creación
+  return categorias.sort((a, b) => 
+    a.orden - b.orden || a.createdAt.toMillis() - b.createdAt.toMillis()
+  );
+};
+
+/**
+ * Obtiene solo las categorías ACTIVAS (para la tienda pública)
+ * Ordenadas por el campo 'orden'
+ */
+export const getCategoriasActivas = async (): Promise<Categoria[]> => {
+  const q = query(
+    collection(db, 'categorias'), 
+    where('tenantId', '==', TENANT_ID),
+    where('activo', '==', true)
+  );
+  const snapshot = await getDocs(q);
+  const categorias = snapshot.docs.map(
+    doc => ({ id: doc.id, ...doc.data() } as Categoria)
+  );
+  
+  return categorias.sort((a, b) => a.orden - b.orden);
+};
+
+/**
+ * Obtiene las subcategorías de una categoría padre específica
+ * @param padreId ID de la categoría padre
+ */
+export const getSubcategorias = async (padreId: string): Promise<Categoria[]> => {
+  const q = query(
+    collection(db, 'categorias'), 
+    where('tenantId', '==', TENANT_ID),
+    where('padreId', '==', padreId),
+    where('activo', '==', true)
+  );
+  const snapshot = await getDocs(q);
+  const categorias = snapshot.docs.map(
+    doc => ({ id: doc.id, ...doc.data() } as Categoria)
+  );
+  
+  return categorias.sort((a, b) => a.orden - b.orden);
+};
+
+/**
+ * Actualiza una categoría existente
+ * @param categoriaId ID de la categoría a actualizar
+ * @param data Campos a actualizar (puede ser uno o varios)
+ */
+export const updateCategoria = async (
+  categoriaId: string, 
+  data: Partial<Categoria>
+): Promise<void> => {
+  await updateDoc(doc(db, 'categorias', categoriaId), data);
+};
+
+/**
+ * Elimina una categoría permanentemente
+ * ⚠️ PRECAUCIÓN: También debería verificar si hay productos asociados antes de eliminar
+ * @param categoriaId ID de la categoría a eliminar
+ */
+export const deleteCategoria = async (categoriaId: string): Promise<void> => {
+  await deleteDoc(doc(db, 'categorias', categoriaId));
+};
+
+/**
+ * Sube una imagen de categoría a Firebase Storage
+ * @param archivo Archivo de imagen seleccionado
+ * @returns URL pública de descarga de la imagen
+ */
+export const uploadImagenCategoria = async (archivo: File): Promise<string> => {
+  const nombreArchivo = `categorias/${Date.now()}_${archivo.name}`;
+  const storageRef = ref(storage, nombreArchivo);
+  const snapshot = await uploadBytes(storageRef, archivo);
+  const urlDescarga = await getDownloadURL(snapshot.ref);
+  return urlDescarga;
+};
+
+// ==========================================
+// FUNCIONES PARA PRODUCTOS DE LA TIENDA
+// ==========================================
+
+/**
+ * Crea un nuevo producto en la tienda
+ */
+export const addProducto = async (
+  productoData: Omit<Producto, 'id' | 'tenantId' | 'createdAt' | 'updatedAt'>
+): Promise<string> => {
+  const now = Timestamp.now();
+  const docRef = await addDoc(collection(db, 'productos'), {
+    ...productoData,
+    tenantId: TENANT_ID,
+    createdAt: now,
+    updatedAt: now
+  });
+  return docRef.id;
+};
+
+/**
+ * Obtiene TODOS los productos (para el panel administrativo)
+ * Incluye activos e inactivos, ordenados por fecha de creación (más recientes primero)
+ */
+export const getProductos = async (): Promise<Producto[]> => {
+  const q = query(
+    collection(db, 'productos'),
+    where('tenantId', '==', TENANT_ID)
+  );
+  const snapshot = await getDocs(q);
+  const productos = snapshot.docs.map(
+    doc => ({ id: doc.id, ...doc.data() } as Producto)
+  );
+  return productos.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+};
+
+/**
+ * Obtiene solo los productos ACTIVOS (para la tienda pública)
+ * Filtra también los que tienen stock > 0 o permite agotados
+ */
+export const getProductosActivos = async (): Promise<Producto[]> => {
+  const q = query(
+    collection(db, 'productos'),
+    where('tenantId', '==', TENANT_ID),
+    where('activo', '==', true)
+  );
+  const snapshot = await getDocs(q);
+  const productos = snapshot.docs.map(
+    doc => ({ id: doc.id, ...doc.data() } as Producto)
+  );
+  return productos.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+};
+
+/**
+ * Obtiene los productos destacados (para la sección "Destacados")
+ */
+export const getProductosDestacados = async (): Promise<Producto[]> => {
+  const q = query(
+    collection(db, 'productos'),
+    where('tenantId', '==', TENANT_ID),
+    where('activo', '==', true),
+    where('destacado', '==', true)
+  );
+  const snapshot = await getDocs(q);
+  const productos = snapshot.docs.map(
+    doc => ({ id: doc.id, ...doc.data() } as Producto)
+  );
+  return productos.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis()).slice(0, 8);
+};
+
+/**
+ * Obtiene productos de una categoría específica
+ */
+export const getProductosPorCategoria = async (categoriaId: string): Promise<Producto[]> => {
+  const q = query(
+    collection(db, 'productos'),
+    where('tenantId', '==', TENANT_ID),
+    where('activo', '==', true),
+    where('categoriaId', '==', categoriaId)
+  );
+  const snapshot = await getDocs(q);
+  const productos = snapshot.docs.map(
+    doc => ({ id: doc.id, ...doc.data() } as Producto)
+  );
+  return productos.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+};
+
+/**
+ * Obtiene un producto por su ID (para la página de detalle)
+ */
+export const getProductoPorId = async (productoId: string): Promise<Producto | null> => {
+  const docSnap = await getDoc(doc(db, 'productos', productoId));
+  if (!docSnap.exists()) return null;
+  return { id: docSnap.id, ...docSnap.data() } as Producto;
+};
+
+/**
+ * Actualiza un producto existente
+ */
+export const updateProducto = async (
+  productoId: string,
+  data: Partial<Producto>
+): Promise<void> => {
+  await updateDoc(doc(db, 'productos', productoId), {
+    ...data,
+    updatedAt: Timestamp.now()
+  });
+};
+
+/**
+ * Elimina un producto permanentemente
+ */
+export const deleteProducto = async (productoId: string): Promise<void> => {
+  await deleteDoc(doc(db, 'productos', productoId));
+};
+
+/**
+ * Sube una imagen de producto a Firebase Storage
+ * Cada producto puede tener hasta 5 imágenes
+ */
+export const uploadImagenProducto = async (archivo: File): Promise<string> => {
+  const nombreArchivo = `productos/${Date.now()}_${archivo.name}`;
+  const storageRef = ref(storage, nombreArchivo);
+  const snapshot = await uploadBytes(storageRef, archivo);
+  const urlDescarga = await getDownloadURL(snapshot.ref);
+  return urlDescarga;
+};

@@ -4,6 +4,7 @@ import { MainLayout } from './shared/layouts/MainLayout';
 import { AdminLayout } from './shared/layouts/AdminLayout';
 import { ServerLimitPage } from './shared/components/ServerLimitPage';
 
+// Módulos Públicos
 import { HomePage } from './modules/home/pages/HomePage';
 import { RadioPage } from './modules/media/pages/RadioPage';
 import { TVPage } from './modules/media/pages/TVPage';
@@ -18,18 +19,27 @@ import { AdsPage } from './modules/ads/pages/AdsPage';
 import { ContactPage } from './modules/contact/pages/ContactPage';
 import { ChatPage } from './modules/community/pages/ChatPage';
 import { CommunityPage } from './modules/community/pages/CommunityPage';
+import { TarjetaPage } from './modules/contact/pages/TarjetaPage';
+import { CarritoPage } from './modules/tienda/pages/CarritoPage';
+
+// Módulos del Dashboard (Admin)
 import { DashboardHome } from './modules/dashboard/pages/DashboardHome';
 import { DJsPage } from './modules/dashboard/pages/DJsPage';
 import { ProgramasPage } from './modules/dashboard/pages/ProgramasPage';
-import { LoginPage } from './modules/auth/pages/LoginPage';
-import { ProtectedRoute } from './shared/components/ProtectedRoute';
 import { NoticiasPodcastsPage } from './modules/dashboard/pages/NoticiasPodcastsPage';
 import { StreamingPage } from './modules/dashboard/pages/StreamingPage';
 import { PublicidadPage } from './modules/dashboard/pages/PublicidadPage';
 import { AnaliticasPage } from './modules/dashboard/pages/AnaliticasPage';
 import { AliadosPage } from './modules/dashboard/pages/AliadosPage';
 import { NotificacionesPage } from './modules/dashboard/pages/NotificacionesPage';
-import { TarjetaPage } from './modules/contact/pages/TarjetaPage';
+import { CategoriasPage } from './modules/dashboard/pages/CategoriasPage';
+import { ProductosPage } from './modules/dashboard/pages/ProductosPage';
+
+// Módulos de Autenticación y Tienda Virtual
+import { LoginPage } from './modules/auth/pages/LoginPage';
+import { ProtectedRoute } from './shared/components/ProtectedRoute';
+import { TiendaPage } from './modules/tienda/pages/TiendaPage';
+import { ProductoDetallePage } from './modules/tienda/pages/ProductoDetallePage';
 
 const Placeholder = ({ title }: { title: string }) => (
   <div className="flex items-center justify-center min-h-[60vh]">
@@ -54,11 +64,15 @@ function App() {
     <BrowserRouter>
       <SplashScreen />
       <Routes>
-        {/* ✅ RUTAS INDEPENDIENTES (Sin layout principal) */}
+        {/* ========================================== */}
+        {/* 1. RUTAS INDEPENDIENTES (Sin layout principal) */}
+        {/* ========================================== */}
         <Route path="/tarjeta" element={<TarjetaPage />} />
         <Route path="/login" element={<LoginPage />} />
 
-        {/* Rutas Públicas con Layout Principal */}
+        {/* ========================================== */}
+        {/* 2. RUTAS PÚBLICAS (Con MainLayout) */}
+        {/* ========================================== */}
         <Route path="/" element={<MainLayout />}>
           <Route index element={<HomePage />} />
           <Route path="emisora" element={<RadioPage />} />
@@ -74,10 +88,19 @@ function App() {
           <Route path="contacto" element={<ContactPage />} />
           <Route path="chat" element={<ChatPage />} />
           <Route path="comunidad" element={<CommunityPage />} />
+          
+          {/* 🛒 RUTAS DE LA TIENDA VIRTUAL PÚBLICA */}
+          <Route path="tienda" element={<TiendaPage />} />
+          <Route path="tienda/carrito" element={<CarritoPage />} />
+          <Route path="tienda/producto/:id" element={<ProductoDetallePage />} />
+          
+          {/* Ruta comodín (404) */}
           <Route path="*" element={<Placeholder title="Página no encontrada" />} />
         </Route>
 
-        {/* Rutas protegidas del Panel de Administrador */}
+        {/* ========================================== */}
+        {/* 3. RUTAS PROTEGIDAS DEL PANEL ADMIN */}
+        {/* ========================================== */}
         <Route 
           path="/dashboard" 
           element={
@@ -96,6 +119,11 @@ function App() {
           <Route path="analiticas" element={<AnaliticasPage />} />
           <Route path="notificaciones" element={<NotificacionesPage />} />
           <Route path="aliados" element={<AliadosPage />} />
+          
+          {/* 🛒 RUTAS DE ADMINISTRACIÓN DE LA TIENDA */}
+          <Route path="categorias" element={<CategoriasPage />} />
+          <Route path="productos" element={<ProductosPage />} />
+          
           <Route path="ia" element={<Placeholder title="Herramientas IA" />} />
           <Route path="configuracion" element={<Placeholder title="Configuración" />} />
         </Route>

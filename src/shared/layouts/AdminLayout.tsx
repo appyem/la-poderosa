@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Users, User, Radio, Calendar, Newspaper, 
-  Megaphone, BarChart3, Settings, LogOut, ChevronDown, Building2, Bot, Bell 
+  Megaphone, BarChart3, Settings, LogOut, ChevronDown, Building2, Bot, Bell,
+  FolderTree, ShoppingBag
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { logout } from '../../core/firebase/services';
@@ -24,7 +25,7 @@ export const AdminLayout = () => {
   const menuItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Resumen' },
     { to: '/dashboard/usuarios', icon: Users, label: 'Usuarios y Roles' },
-    { to: '/dashboard/djs', icon: User, label: 'Gestión de DJs' }, // ✅ NUEVO ENLACE AGREGADO
+    { to: '/dashboard/djs', icon: User, label: 'Gestión de DJs' },
     { to: '/dashboard/programacion', icon: Calendar, label: 'Programación' },
     { to: '/dashboard/contenido', icon: Newspaper, label: 'Noticias y Podcasts' },
     { to: '/dashboard/streaming', icon: Radio, label: 'Control de Streaming' },
@@ -32,16 +33,18 @@ export const AdminLayout = () => {
     { to: '/dashboard/notificaciones', icon: Bell, label: 'Notificaciones' },
     { to: '/dashboard/analiticas', icon: BarChart3, label: 'Analíticas' },
     { to: '/dashboard/aliados', icon: Users, label: 'Aliados' },
+    
+    // 🛒 SECCIÓN TIENDA VIRTUAL
+    { to: '/dashboard/categorias', icon: FolderTree, label: 'Categorías Tienda' },
+    { to: '/dashboard/productos', icon: ShoppingBag, label: 'Productos' },
+    
     { to: '/dashboard/ia', icon: Bot, label: 'Herramientas IA' },
     { to: '/dashboard/configuracion', icon: Settings, label: 'Configuración' },
   ];
 
-
-  
-
   return (
     <div className="min-h-screen bg-dark-bg text-text-primary flex">
-      <aside className="w-64 bg-dark-surface border-r border-dark-border flex flex-col fixed h-full z-20 hidden md:flex">
+      <aside className="w-64 bg-dark-surface border-r border-dark-border flex-col fixed h-full z-20 hidden md:flex">
         <div className="p-5 border-b border-dark-border">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center font-bold text-white">P</div>
@@ -71,12 +74,12 @@ export const AdminLayout = () => {
         </nav>
         <div className="p-4 border-t border-dark-border">
           <button 
-  onClick={handleLogout}
-  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors w-full"
->
-  <LogOut className="w-5 h-5" />
-  Cerrar Sesión
-</button>
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors w-full"
+          >
+            <LogOut className="w-5 h-5" />
+            Cerrar Sesión
+          </button>
         </div>
       </aside>
       <div className="flex-1 md:ml-64 flex flex-col min-h-screen">

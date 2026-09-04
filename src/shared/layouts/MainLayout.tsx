@@ -3,7 +3,8 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { 
   Home, Radio, Tv, Newspaper, Calendar, 
   Mic2, MessageCircle, Users, Megaphone, Phone, LayoutDashboard, 
-  Menu, X, Search, Bell, Play, Pause, Volume2, VolumeX, Briefcase, Handshake
+  Menu, X, Search, Bell, Play, Pause, Volume2, VolumeX, Briefcase, Handshake, ShoppingBag,
+  ShoppingCart // ✅ NUEVO: Agregado para el ícono del carrito
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { solicitarPermisoNotificaciones } from '../../core/firebase/services';
@@ -18,13 +19,35 @@ export const MainLayout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
-  // ✅ ESTADO PARA EL POPUP DE PUBLICIDAD (Siempre true al montar el componente)
   const [showAdPopup, setShowAdPopup] = useState(true);
-
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  
+  // ✅ NUEVO: Estado para el contador del carrito
+  const [cartCount, setCartCount] = useState(0);
+  
   const audioRef = useRef<HTMLAudioElement>(null);
 
+   // ✅ NUEVO: Interfaz para tipar el carrito sin usar 'any'
+  interface CartItem {
+    cantidad: number;
+  }
+
+  // ✅ NUEVO: Efecto para leer y actualizar el contador del carrito
+  useEffect(() => {
+    const updateCartCount = () => {
+      const cart = JSON.parse(localStorage.getItem('lapoderosa_cart') || '[]') as CartItem[];
+      const count = cart.reduce((acc: number, item: CartItem) => acc + item.cantidad, 0);
+      setCartCount(count);
+    };
+    updateCartCount();
+    window.addEventListener('storage', updateCartCount);
+    window.addEventListener('cartUpdated', updateCartCount);
+    return () => {
+      window.removeEventListener('storage', updateCartCount);
+      window.removeEventListener('cartUpdated', updateCartCount);
+    };
+  }, []);
   useEffect(() => {
     if (audioRef.current) {
       if (isPlaying) {
@@ -41,7 +64,6 @@ export const MainLayout = () => {
     }
   }, [isMuted]);
 
-  // ✅ Solicitar permiso de notificaciones al entrar al sitio (una sola vez)
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
       const timer = setTimeout(() => {
@@ -78,6 +100,7 @@ export const MainLayout = () => {
     { to: '/', icon: Home, label: 'Inicio' },
     { to: '/emisora', icon: Radio, label: 'Emisora' },
     { to: '/servicios', icon: Briefcase, label: 'Servicios' },
+    { to: '/tienda', icon: ShoppingBag, label: 'Tienda' },
     { to: '/television', icon: Tv, label: 'TV' },
     { to: '/noticias', icon: Newspaper, label: 'Noticias' },
   ];
@@ -88,6 +111,7 @@ export const MainLayout = () => {
     { to: '/television', icon: Tv, label: 'Televisión' },
     { to: '/podcasts', icon: Mic2, label: 'Podcasts' },
     { to: '/noticias', icon: Newspaper, label: 'Noticias' },
+    { to: '/tienda', icon: ShoppingBag, label: 'Tienda' },
     { to: '/programacion', icon: Calendar, label: 'Programación' },
     { to: '/servicios', icon: Briefcase, label: 'Servicios' },
     { to: '/aliados', icon: Handshake, label: 'Aliados' },
@@ -132,6 +156,17 @@ export const MainLayout = () => {
                 <Search className="w-4 h-4 text-white/70" />
                 <span className="text-sm text-white/70">Buscar...</span>
               </button>
+              
+              {/* ✅ NUEVO: Botón del carrito con contador */}
+              <NavLink to="/tienda/carrito" className="p-2 rounded-lg hover:bg-white/10 relative">
+                <ShoppingCart className="w-5 h-5 text-white/80" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-brand text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-black">
+                    {cartCount}
+                  </span>
+                )}
+              </NavLink>
+
               <button className="p-2 rounded-lg hover:bg-white/10 relative">
                 <Bell className="w-5 h-5 text-white/80" />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand rounded-full" />
@@ -268,7 +303,6 @@ export const MainLayout = () => {
         </nav>
       </div>
 
-      {/* ✅ POPUP DE PUBLICIDAD (Se muestra siempre al montar el layout) */}
       {showAdPopup && <AdPopup onClose={() => setShowAdPopup(false)} />}
     </div>
   );
