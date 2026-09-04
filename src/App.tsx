@@ -21,6 +21,7 @@ import { ChatPage } from './modules/community/pages/ChatPage';
 import { CommunityPage } from './modules/community/pages/CommunityPage';
 import { TarjetaPage } from './modules/contact/pages/TarjetaPage';
 import { CarritoPage } from './modules/tienda/pages/CarritoPage';
+import { FavoritosPage } from './modules/tienda/pages/FavoritosPage';
 
 // Módulos del Dashboard (Admin)
 import { DashboardHome } from './modules/dashboard/pages/DashboardHome';
@@ -93,6 +94,7 @@ function App() {
           <Route path="tienda" element={<TiendaPage />} />
           <Route path="tienda/carrito" element={<CarritoPage />} />
           <Route path="tienda/producto/:id" element={<ProductoDetallePage />} />
+          <Route path="tienda/favoritos" element={<FavoritosPage />} />
           
           {/* Ruta comodín (404) */}
           <Route path="*" element={<Placeholder title="Página no encontrada" />} />

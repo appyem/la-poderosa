@@ -129,17 +129,46 @@ export const ProductoDetallePage = () => {
     setTimeout(() => setMostrarToast(false), 2500);
   };
 
-  // ✅ NUEVO: Función para alternar favoritos
-  const toggleFavorite = () => {
-    if (!id) return;
-    let favorites = JSON.parse(localStorage.getItem(FAV_STORAGE_KEY) || '[]');
-    if (isFavorite) {
-      favorites = favorites.filter((favId: string) => favId !== id);
-    } else {
-      favorites.push(id);
+      const toggleFavorite = () => {
+    if (!id || !producto) return;
+
+    // ✅ Interfaz local para tipar estrictamente los favoritos
+    interface FavData {
+      productoId: string;
+      titulo: string;
+      precio: number;
+      imagenUrl: string;
     }
+
+    let favorites: FavData[] = [];
+    try {
+      const parsed = JSON.parse(localStorage.getItem(FAV_STORAGE_KEY) || '[]');
+      if (Array.isArray(parsed)) {
+        // ✅ Type guard estricto, sin 'any'
+        favorites = parsed.filter(
+          (item): item is FavData => 
+            typeof item === 'object' && item !== null && 'productoId' in item
+        );
+      }
+    } catch (error) {
+      console.error('Error al leer favoritos:', error);
+    }
+
+    const existe = favorites.find((f) => f.productoId === id);
+    
+    if (existe) {
+      favorites = favorites.filter((f) => f.productoId !== id);
+    } else {
+      favorites.push({
+        productoId: producto.id,
+        titulo: producto.titulo,
+        precio: producto.precio,
+        imagenUrl: producto.imagenes[0] || ''
+      });
+    }
+    
     localStorage.setItem(FAV_STORAGE_KEY, JSON.stringify(favorites));
-    setIsFavorite(!isFavorite);
+    setIsFavorite(!existe);
   };
 
   const handleCompartirWhatsApp = () => {

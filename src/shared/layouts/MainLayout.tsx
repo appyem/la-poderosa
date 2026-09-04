@@ -4,7 +4,7 @@ import {
   Home, Radio, Tv, Newspaper, Calendar, 
   Mic2, MessageCircle, Users, Megaphone, Phone, LayoutDashboard, 
   Menu, X, Search, Bell, Play, Pause, Volume2, VolumeX, Briefcase, Handshake, ShoppingBag,
-  ShoppingCart // ✅ NUEVO: Agregado para el ícono del carrito
+  ShoppingCart, Heart // ✅ AGREGADO AQUÍ
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { solicitarPermisoNotificaciones } from '../../core/firebase/services';
@@ -166,6 +166,13 @@ export const MainLayout = () => {
                   </span>
                 )}
               </NavLink>
+
+                          {/* Botón de Favoritos */}
+              <NavLink to="/tienda/favoritos" className="p-2 rounded-lg hover:bg-white/10 relative hidden md:block">
+                <Heart className="w-5 h-5 text-white/80" />
+              </NavLink>
+
+
 
               <button className="p-2 rounded-lg hover:bg-white/10 relative">
                 <Bell className="w-5 h-5 text-white/80" />
