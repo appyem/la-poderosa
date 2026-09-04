@@ -954,3 +954,23 @@ export const uploadImagenProducto = async (archivo: File): Promise<string> => {
   const urlDescarga = await getDownloadURL(snapshot.ref);
   return urlDescarga;
 };
+
+// ==========================================
+// FUNCIONES PARA PEDIDOS DE LA TIENDA
+// ==========================================
+
+/**
+ * Crea un nuevo pedido en Firebase (estado inicial: 'pendiente')
+ */
+export const addPedido = async (
+  pedidoData: Omit<Pedido, 'id' | 'tenantId' | 'createdAt' | 'updatedAt'>
+): Promise<string> => {
+  const now = Timestamp.now();
+  const docRef = await addDoc(collection(db, 'pedidos'), {
+    ...pedidoData,
+    tenantId: TENANT_ID,
+    createdAt: now,
+    updatedAt: now
+  });
+  return docRef.id;
+};
