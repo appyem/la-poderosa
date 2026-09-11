@@ -12,7 +12,7 @@ import { solicitarPermisoNotificaciones } from '../../core/firebase/services';
 import { InstallAppButton } from '../../components/InstallAppButton';
 import { AdPopup } from '../components/AdPopup';
 
-const STREAM_URL = "https://streams.radio.co/sf25c76934/listen";
+const STREAM_URL = "http://sapircast.caster.fm:10406/q4QD0";
 const WHATSAPP_URL = "https://wa.me/573227027174?text=" + encodeURIComponent("Hola La Poderosa, quiero más información");
 
 export const MainLayout = () => {
