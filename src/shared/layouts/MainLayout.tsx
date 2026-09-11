@@ -4,15 +4,17 @@ import {
   Home, Radio, Tv, Newspaper, Calendar, 
   Mic2, MessageCircle, Users, Megaphone, Phone, LayoutDashboard, 
   Menu, X, Search, Bell, Play, Pause, Volume2, VolumeX, Briefcase, Handshake, ShoppingBag,
-  ShoppingCart, Heart // ✅ AGREGADO AQUÍ
+  ShoppingCart, Heart
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { solicitarPermisoNotificaciones } from '../../core/firebase/services';
 
 import { InstallAppButton } from '../../components/InstallAppButton';
 import { AdPopup } from '../components/AdPopup';
+import { useRadioMetadata } from '../../hooks/useRadioMetadata';
 
-const STREAM_URL = "http://sapircast.caster.fm:10406/q4QD0";
+// ✅ CORREGIDO: Ahora usa HTTPS para evitar bloqueos del navegador
+const STREAM_URL = "https://sapircast.caster.fm:10406/q4QD0";
 const WHATSAPP_URL = "https://wa.me/573227027174?text=" + encodeURIComponent("Hola La Poderosa, quiero más información");
 
 export const MainLayout = () => {
@@ -21,19 +23,19 @@ export const MainLayout = () => {
 
   const [showAdPopup, setShowAdPopup] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
   
-  // ✅ NUEVO: Estado para el contador del carrito
+  // ✅ CORREGIDO: Ahora estas variables se usan en el JSX, eliminando el error de ESLint
+  const { artist, title } = useRadioMetadata();
+  
+  const [isMuted, setIsMuted] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   
   const audioRef = useRef<HTMLAudioElement>(null);
 
-   // ✅ NUEVO: Interfaz para tipar el carrito sin usar 'any'
   interface CartItem {
     cantidad: number;
   }
 
-  // ✅ NUEVO: Efecto para leer y actualizar el contador del carrito
   useEffect(() => {
     const updateCartCount = () => {
       const cart = JSON.parse(localStorage.getItem('lapoderosa_cart') || '[]') as CartItem[];
@@ -48,10 +50,11 @@ export const MainLayout = () => {
       window.removeEventListener('cartUpdated', updateCartCount);
     };
   }, []);
+
   useEffect(() => {
     if (audioRef.current) {
       if (isPlaying) {
-        audioRef.current.play().catch(e => console.log("Error al reproducir:", e));
+        audioRef.current.play().catch(() => console.log("Error al reproducir"));
       } else {
         audioRef.current.pause();
       }
@@ -157,7 +160,6 @@ export const MainLayout = () => {
                 <span className="text-sm text-white/70">Buscar...</span>
               </button>
               
-              {/* ✅ NUEVO: Botón del carrito con contador */}
               <NavLink to="/tienda/carrito" className="p-2 rounded-lg hover:bg-white/10 relative">
                 <ShoppingCart className="w-5 h-5 text-white/80" />
                 {cartCount > 0 && (
@@ -167,12 +169,9 @@ export const MainLayout = () => {
                 )}
               </NavLink>
 
-                          {/* Botón de Favoritos */}
               <NavLink to="/tienda/favoritos" className="p-2 rounded-lg hover:bg-white/10 relative hidden md:block">
                 <Heart className="w-5 h-5 text-white/80" />
               </NavLink>
-
-
 
               <button className="p-2 rounded-lg hover:bg-white/10 relative">
                 <Bell className="w-5 h-5 text-white/80" />
@@ -243,6 +242,7 @@ export const MainLayout = () => {
           </main>
         </div>
 
+        {/* ✅ REPRODUCTOR FIJO INFERIOR CON METADATOS EN VIVO */}
         <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-t border-white/10 px-4 py-3">
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -250,8 +250,9 @@ export const MainLayout = () => {
                 <Radio className="w-5 h-5 text-brand" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-white truncate">LA PODEROSA - En Vivo</p>
-                <p className="text-xs text-white/60 truncate">Streaming 24/7</p>
+                {/* ✅ AQUÍ SE USAN LAS VARIABLES artist y title */}
+                <p className="text-sm font-semibold text-white truncate">{title}</p>
+                <p className="text-xs text-white/60 truncate">{artist}</p>
               </div>
             </div>
 
@@ -311,6 +312,7 @@ export const MainLayout = () => {
       </div>
 
       {showAdPopup && <AdPopup onClose={() => setShowAdPopup(false)} />}
+           
     </div>
   );
 };
