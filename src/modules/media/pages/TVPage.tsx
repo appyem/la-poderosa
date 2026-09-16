@@ -23,6 +23,9 @@ export const TVPage = () => {
   const [userName, setUserName] = useState('');
   const [nameConfirmed, setNameConfirmed] = useState(false);
   const [showChat, setShowChat] = useState(true);
+  
+  // ✅ NUEVO: Referencia al contenedor con scroll para medir la posición
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,8 +51,22 @@ export const TVPage = () => {
     return () => clearInterval(chatInterval);
   }, []);
 
+  // ✅ CORRECCIÓN DEFINITIVA DEL SCROLL:
+  // Solo baja al fondo si el usuario YA estaba cerca del fondo (umbral de 100px).
+  // Si el usuario subió para leer mensajes antiguos, respeta su posición y NO lo baja a la fuerza.
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    // Calculamos si el usuario está a menos de 100px del fondo
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+
+    if (isNearBottom) {
+      // Usamos requestAnimationFrame para asegurar que el DOM ya se actualizó con los nuevos mensajes
+      requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
+      });
+    }
   }, [chatMessages]);
 
   const handleSendMessage = async (e: FormEvent) => {
@@ -65,7 +82,8 @@ export const TVPage = () => {
     try {
       await addChatMessage(finalUserName, newMessage.trim());
       setNewMessage('');
-      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 300);
+      // Scroll inmediato solo cuando el usuario envía su propio mensaje
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'auto' }), 100);
     } catch (error) {
       console.error('Error al enviar mensaje:', error);
     }
@@ -103,7 +121,6 @@ export const TVPage = () => {
             </div>
           )}
 
-          {/* Overlay de controles */}
           {videoId && (
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
               <div className="absolute top-4 left-4 flex items-center gap-3 pointer-events-auto">
@@ -173,7 +190,11 @@ export const TVPage = () => {
 
             {showChat && (
               <>
-                <div className="h-96 overflow-y-auto p-4 space-y-3">
+                {/* ✅ NUEVO: Se agregó ref={chatContainerRef} para medir el scroll */}
+                <div 
+                  ref={chatContainerRef}
+                  className="h-96 overflow-y-auto p-4 space-y-3"
+                >
                   {chatMessages.length === 0 ? (
                     <p className="text-text-secondary text-sm text-center py-4">Sé el primero en saludar.</p>
                   ) : (
@@ -204,6 +225,11 @@ export const TVPage = () => {
                         onChange={(e) => setUserName(e.target.value)}
                         placeholder="Tu nombre"
                         className="w-full px-3 py-2 rounded-lg bg-dark-bg border border-dark-border text-white text-sm placeholder:text-text-muted focus:border-brand focus:outline-none"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                          }
+                        }}
                       />
                     )}
                     <div className="flex gap-2">

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import type { FormEvent } from 'react';
 import { Timestamp } from 'firebase/firestore';
 import { Send, Smile, Paperclip, MoreVertical, Loader2 } from 'lucide-react';
 import { getChatMessages, addChatMessage, type ChatMessage } from '../../../core/firebase/services';
@@ -9,12 +10,11 @@ export const ChatPage = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [userName, setUserName] = useState('');
+  const [nameConfirmed, setNameConfirmed] = useState(false); // ✅ NUEVO: Controla cuándo entrar al chat
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null); // ✅ NUEVO: Para controlar el scroll
 
-  // ✅ SOLUCIÓN REAL AL ERROR DE HOOKS: 
-  // La lógica asíncrona y los setState están DENTRO de una función callback, 
-  // lo cual cumple exactamente con la regla oficial de React: 
-  // "calling setState in a callback function when external state changes".
   useEffect(() => {
     let isMounted = true;
 
@@ -31,21 +31,31 @@ export const ChatPage = () => {
       }
     };
 
-    fetchMessages(); // Carga inicial
-    const interval = setInterval(fetchMessages, 5000); // Actualización cada 5s
+    fetchMessages();
+    const interval = setInterval(fetchMessages, 5000);
 
     return () => {
-      isMounted = false; // Previene actualizaciones de estado si el componente se desmonta
+      isMounted = false;
       clearInterval(interval);
     };
   }, []);
 
-  // Scroll automático al último mensaje
+  // ✅ CORRECCIÓN DEFINITIVA DEL SCROLL (igual que en TVPage)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    // Solo baja al fondo si el usuario YA estaba cerca del fondo (umbral de 100px)
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+
+    if (isNearBottom) {
+      requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
+      });
+    }
   }, [messages]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
+  const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
     if (!message.trim() || !userName.trim()) {
       if (!userName.trim()) {
@@ -58,7 +68,6 @@ export const ChatPage = () => {
     try {
       await addChatMessage(userName, message.trim());
       setMessage('');
-      // Forzamos una recarga inmediata tras enviar
       const data = await getChatMessages(50);
       setMessages(data);
     } catch (error) {
@@ -69,37 +78,37 @@ export const ChatPage = () => {
     }
   };
 
-  // Pantalla de ingreso de nombre
-  if (!userName) {
+  // ✅ Pantalla de ingreso de nombre CORREGIDA
+  if (!nameConfirmed) {
     return (
       <div className="h-[calc(100vh-140px)] flex items-center justify-center py-6">
         <div className="max-w-md w-full p-6 bg-dark-surface border border-dark-border rounded-xl space-y-4">
           <h2 className="text-xl font-bold text-white text-center">Bienvenido al Chat en Vivo</h2>
           <p className="text-text-secondary text-center text-sm">Ingresa tu nombre para participar</p>
-          <input
-            type="text"
-            value={userName}
-            onChange={(e) => setUserName(e.target.value)}
-            placeholder="Tu nombre..."
-            className="w-full px-4 py-3 rounded-lg bg-dark-bg border border-dark-border text-white focus:border-brand focus:outline-none"
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && userName.trim()) {
-                // El useEffect se encargará de cargar los mensajes al renderizarse de nuevo
-              }
-            }}
-          />
-          <button
-            onClick={() => {
-              if (userName.trim()) {
-                // Al cambiar el estado, el componente se renderiza y dispara el useEffect
-              }
-            }}
-            disabled={!userName.trim()}
-            className="w-full py-3 rounded-lg bg-brand hover:bg-brand-light text-white font-semibold transition-colors disabled:opacity-50"
-          >
-            Entrar al Chat
-          </button>
+          
+          {/* ✅ Envuelto en un form para que el botón Enter funcione correctamente */}
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (userName.trim()) {
+              setNameConfirmed(true);
+            }
+          }}>
+            <input
+              type="text"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              placeholder="Tu nombre completo..."
+              className="w-full px-4 py-3 rounded-lg bg-dark-bg border border-dark-border text-white focus:border-brand focus:outline-none mb-4"
+              autoFocus
+            />
+            <button
+              type="submit"
+              disabled={!userName.trim()}
+              className="w-full py-3 rounded-lg bg-brand hover:bg-brand-light text-white font-semibold transition-colors disabled:opacity-50"
+            >
+              Entrar al Chat
+            </button>
+          </form>
         </div>
       </div>
     );
@@ -113,7 +122,6 @@ export const ChatPage = () => {
     );
   }
 
-  // ✅ SIN 'any': Usamos el tipo Timestamp oficial de Firebase Firestore
   const formatTime = (timestamp: Timestamp) => {
     const date = timestamp.toDate();
     return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
@@ -131,7 +139,11 @@ export const ChatPage = () => {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-dark-surface rounded-t-xl border border-dark-border border-b-0">
+      {/* ✅ Se agregó ref={chatContainerRef} para medir el scroll */}
+      <div 
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto space-y-4 p-4 bg-dark-surface rounded-t-xl border border-dark-border border-b-0"
+      >
         {messages.length === 0 ? (
           <div className="text-center py-12 text-text-secondary">
             <p>No hay mensajes aún. ¡Sé el primero en escribir!</p>
