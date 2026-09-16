@@ -4,7 +4,7 @@ import { MessageCircle, Heart, Share2, Users, Radio, Send, Loader2, AlertCircle 
 import { getChatMessages, addChatMessage, type ChatMessage } from '../../../core/firebase/services';
 import { Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config'; 
-import { doc, onSnapshot, collection, addDoc, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection, addDoc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import type { Unsubscribe } from 'firebase/firestore';
 
 export const TVPage = () => {
@@ -16,13 +16,15 @@ export const TVPage = () => {
   const [showChat, setShowChat] = useState(true);
   const [loading, setLoading] = useState(true);
   const [isLive, setIsLive] = useState(false);
+  const [viewerId] = useState(() => `viewer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const unsubscribeIceRef = useRef<Unsubscribe | null>(null);
-  const unsubscribeMainRef = useRef<Unsubscribe | null>(null);
+  const unsubscribeViewerRef = useRef<Unsubscribe | null>(null);
+  const unsubscribeOfferRef = useRef<Unsubscribe | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(Date.now()), 60000);
@@ -44,120 +46,161 @@ export const TVPage = () => {
     return () => clearInterval(chatInterval);
   }, []);
 
-  // ✅ Lógica WebRTC ESTABLE (Sin bucles de reconexión)
+  // ✅ Nueva lógica: Suscribirse como espectador cuando hay transmisión activa
   useEffect(() => {
-    const rtcConfig: RTCConfiguration = {
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+        const rtcConfig: RTCConfiguration = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' }
+      ],
       bundlePolicy: 'max-bundle',
       rtcpMuxPolicy: 'require'
     };
 
-    const setupWebRTC = () => {
-      console.log('📺 TVPage: Escuchando señales de transmisión...');
+    const subscribeAsViewer = async () => {
+      console.log(`📺 TVPage [${viewerId}]: Registrándose como espectador...`);
       
-      unsubscribeMainRef.current = onSnapshot(doc(db, 'live_streams', 'main'), async (snapshot) => {
+      // Crear nuestra sesión en Firestore
+      const viewerDocRef = doc(db, 'live_streams', 'sessions', 'viewers', viewerId);
+      await setDoc(viewerDocRef, {
+        joined: serverTimestamp(),
+        userAgent: navigator.userAgent
+      });
+
+      // Escuchar nuestra sesión para recibir la oferta del admin
+      unsubscribeViewerRef.current = onSnapshot(viewerDocRef, async (snapshot) => {
         const data = snapshot.data();
-        console.log('📺 TVPage: Datos de Firestore:', data ? `active=${data.active}, type=${data.type}` : 'null');
-
-        if (!data || !data.active) {
-          console.log('📺 TVPage: Transmisión finalizada (cleanup).');
-          setIsLive(false);
-          if (videoRef.current) videoRef.current.srcObject = null;
-          if (pcRef.current) {
-            pcRef.current.close();
-            pcRef.current = null;
-          }
-          if (unsubscribeIceRef.current) {
-            unsubscribeIceRef.current();
-            unsubscribeIceRef.current = null;
-          }
-          return;
-        }
-
-        // Si ya estamos conectados, no hacemos nada
-        if (pcRef.current && (pcRef.current.connectionState === 'connected' || pcRef.current.connectionState === 'connecting')) {
-          return;
-        }
-
-        // Solo actuamos si es una 'offer' fresca
-        if (data.type === 'offer') {
-          console.log('📺 TVPage: Offer recibida, iniciando conexión...');
-          setIsLive(true);
-          
-          if (pcRef.current) {
-            pcRef.current.close();
-            pcRef.current = null;
-          }
-          if (unsubscribeIceRef.current) {
-            unsubscribeIceRef.current();
-            unsubscribeIceRef.current = null;
-          }
-
-          const pc = new RTCPeerConnection(rtcConfig);
-          pcRef.current = pc;
-
-          pc.ontrack = (event) => {
-            console.log('📺 TVPage: ¡Pista de video recibida!');
-            if (videoRef.current && event.streams[0]) {
-              if (videoRef.current.srcObject !== event.streams[0]) {
-                videoRef.current.srcObject = event.streams[0];
-                videoRef.current.play().catch(() => {});
-              }
-            }
-          };
-
-          pc.onicecandidate = async (event) => {
-            if (event.candidate) {
-              await addDoc(collection(db, 'live_streams', 'main', 'ice_candidates_viewer'), {
-                candidate: event.candidate.toJSON(),
-                timestamp: serverTimestamp()
-              });
-            }
-          };
-
-          const unsubscribeIce = onSnapshot(collection(db, 'live_streams', 'main', 'ice_candidates_admin'), (snap) => {
-            snap.docChanges().forEach((change) => {
-              if (change.type === 'added') {
-                if (pc.signalingState !== 'closed' && pc.signalingState !== 'have-remote-pranswer') {
-                  const candData = change.doc.data();
-                  pc.addIceCandidate(new RTCIceCandidate(candData.candidate)).catch(console.error);
-                }
-              }
-            });
-          });
-          
-          unsubscribeIceRef.current = unsubscribeIce;
-
-          try {
-            await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-
-            await setDoc(doc(db, 'live_streams', 'main'), {
-              type: 'answer',
-              sdp: answer.sdp,
-              active: true,
-              timestamp: serverTimestamp()
-            }, { merge: true });
-
-            console.log('📺 TVPage: Handshake completado, esperando video...');
-
-          } catch (err) {
-            console.error('❌ Error en el handshake de WebRTC:', err);
-          }
+        
+        if (data?.offer && !pcRef.current) {
+          console.log(`📺 TVPage [${viewerId}]: Oferta recibida del admin`);
+          await connectToStream(data.offer, rtcConfig);
         }
       });
+
+      // Detectar si la transmisión se detiene
+      unsubscribeOfferRef.current = onSnapshot(
+        doc(db, 'live_streams', 'active_offer'),
+        (snapshot) => {
+          if (!snapshot.exists()) {
+            console.log(`📺 TVPage [${viewerId}]: Transmisión finalizada`);
+            cleanup();
+          }
+        }
+      );
     };
 
-    setupWebRTC();
+    const connectToStream = async (offer: { sdp: string; type: string }, rtcConfig: RTCConfiguration) => {
+      setIsLive(true);
+      
+      const pc = new RTCPeerConnection(rtcConfig);
+      pcRef.current = pc;
+
+      pc.ontrack = (event) => {
+        console.log(`📺 TVPage [${viewerId}]: ¡Pista de video recibida!`);
+        if (videoRef.current && event.streams[0]) {
+          videoRef.current.srcObject = event.streams[0];
+          videoRef.current.play().catch(() => {});
+        }
+      };
+
+      pc.onicecandidate = async (event) => {
+        if (event.candidate) {
+          await addDoc(
+            collection(db, 'live_streams', 'sessions', 'viewers', viewerId, 'ice_candidates_viewer'),
+            {
+              candidate: event.candidate.toJSON(),
+              timestamp: serverTimestamp()
+            }
+          );
+        }
+      };
+
+      // Escuchar ICE candidates del admin
+      unsubscribeIceRef.current = onSnapshot(
+        collection(db, 'live_streams', 'sessions', 'viewers', viewerId, 'ice_candidates_admin'),
+        (snap) => {
+          snap.docChanges().forEach((change) => {
+            if (change.type === 'added' && pc.signalingState !== 'closed') {
+              const candData = change.doc.data();
+              pc.addIceCandidate(new RTCIceCandidate(candData.candidate)).catch(console.error);
+            }
+          });
+        }
+      );
+
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription({ 
+          type: 'offer', 
+          sdp: offer.sdp 
+        }));
+        
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        // Enviar respuesta al admin
+        await setDoc(viewerDocRef, {
+          answer: {
+            sdp: answer.sdp,
+            type: 'answer'
+          }
+        }, { merge: true });
+
+        console.log(`📺 TVPage [${viewerId}]: Handshake completado`);
+      } catch (err) {
+        console.error('❌ Error en el handshake:', err);
+      }
+    };
+
+    const viewerDocRef = doc(db, 'live_streams', 'sessions', 'viewers', viewerId);
+
+    const cleanup = () => {
+      setIsLive(false);
+      if (videoRef.current) videoRef.current.srcObject = null;
+      if (pcRef.current) {
+        pcRef.current.close();
+        pcRef.current = null;
+      }
+      if (unsubscribeIceRef.current) {
+        unsubscribeIceRef.current();
+        unsubscribeIceRef.current = null;
+      }
+      if (unsubscribeViewerRef.current) {
+        unsubscribeViewerRef.current();
+        unsubscribeViewerRef.current = null;
+      }
+      if (unsubscribeOfferRef.current) {
+        unsubscribeOfferRef.current();
+        unsubscribeOfferRef.current = null;
+      }
+    };
+
+    // Verificar si hay transmisión activa antes de suscribirse
+    getDoc(doc(db, 'live_streams', 'active_offer')).then((snap) => {
+      if (snap.exists()) {
+        subscribeAsViewer();
+      } else {
+        // Escuchar si se activa una transmisión
+        unsubscribeOfferRef.current = onSnapshot(
+          doc(db, 'live_streams', 'active_offer'),
+          (snapshot) => {
+            if (snapshot.exists()) {
+              subscribeAsViewer();
+            }
+          }
+        );
+      }
+    });
 
     return () => {
-      console.log('📺 TVPage: Limpiando listeners de WebRTC...');
-      if (unsubscribeMainRef.current) unsubscribeMainRef.current();
-      if (unsubscribeIceRef.current) unsubscribeIceRef.current();
-      if (pcRef.current) pcRef.current.close();
+      console.log(`📺 TVPage [${viewerId}]: Limpiando...`);
+      cleanup();
+      // Borrar nuestra sesión al salir
+      deleteDoc(viewerDocRef).catch(() => {});
     };
-  }, []);
+  }, [viewerId]);
 
   useEffect(() => {
     const container = chatContainerRef.current;
@@ -168,7 +211,6 @@ export const TVPage = () => {
     }
   }, [chatMessages]);
 
-  // ✅ Chat con diagnóstico para saber si falla el envío
   const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
@@ -178,9 +220,7 @@ export const TVPage = () => {
     setNameConfirmed(true);
     
     try {
-      console.log('Enviando mensaje:', newMessage);
       await addChatMessage(finalUserName, newMessage.trim());
-      console.log('Mensaje enviado con éxito');
       setNewMessage('');
       setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'auto' }), 100);
     } catch (error) {
