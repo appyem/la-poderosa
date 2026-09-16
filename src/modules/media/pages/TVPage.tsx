@@ -1,91 +1,191 @@
 import { useState, useEffect, useRef } from 'react';
 import type { FormEvent } from 'react';
-import { 
-  MessageCircle, Heart, Share2, Users, Radio, 
-  Send, Loader2, AlertCircle 
-} from 'lucide-react';
-import { 
-  getTvConfig, 
-  extraerVideoIdDeYoutube,
-  getChatMessages, 
-  addChatMessage, 
-  type ChatMessage 
-} from '../../../core/firebase/services';
-import { Timestamp } from 'firebase/firestore';
+import { MessageCircle, Heart, Share2, Users, Radio, Send, Loader2, AlertCircle } from 'lucide-react';
+import { getChatMessages, addChatMessage, type ChatMessage } from '../../../core/firebase/services';
+import { Timestamp, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../../core/firebase/config'; 
+import { doc, onSnapshot, collection, addDoc, setDoc } from 'firebase/firestore';
+import type { Unsubscribe } from 'firebase/firestore';
 
 export const TVPage = () => {
-  const [videoId, setVideoId] = useState('');
-  const [loadingTv, setLoadingTv] = useState(true);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
-  
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [userName, setUserName] = useState('');
   const [nameConfirmed, setNameConfirmed] = useState(false);
   const [showChat, setShowChat] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [isLive, setIsLive] = useState(false);
   
-  // ✅ NUEVO: Referencia al contenedor con scroll para medir la posición
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const unsubscribeIceRef = useRef<Unsubscribe | null>(null);
+  const unsubscribeMainRef = useRef<Unsubscribe | null>(null);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(Date.now());
-    }, 60000);
+    const timer = setInterval(() => setCurrentTime(Date.now()), 60000);
     return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
-    getTvConfig().then(url => {
-      setVideoId(extraerVideoIdDeYoutube(url));
-      setLoadingTv(false);
-    });
-
     const loadChat = async () => {
-      const messages = await getChatMessages(50);
-      setChatMessages(messages);
+      try {
+        const messages = await getChatMessages(50);
+        setChatMessages(messages);
+        setLoading(false);
+      } catch {
+        setLoading(false);
+      }
     };
     loadChat();
-
     const chatInterval = setInterval(loadChat, 5000);
     return () => clearInterval(chatInterval);
   }, []);
 
-  // ✅ CORRECCIÓN DEFINITIVA DEL SCROLL:
-  // Solo baja al fondo si el usuario YA estaba cerca del fondo (umbral de 100px).
-  // Si el usuario subió para leer mensajes antiguos, respeta su posición y NO lo baja a la fuerza.
+  // ✅ Lógica WebRTC ESTABLE (Sin bucles de reconexión)
+  useEffect(() => {
+    const rtcConfig: RTCConfiguration = {
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+      bundlePolicy: 'max-bundle',
+      rtcpMuxPolicy: 'require'
+    };
+
+    const setupWebRTC = () => {
+      console.log('📺 TVPage: Escuchando señales de transmisión...');
+      
+      unsubscribeMainRef.current = onSnapshot(doc(db, 'live_streams', 'main'), async (snapshot) => {
+        const data = snapshot.data();
+        console.log('📺 TVPage: Datos de Firestore:', data ? `active=${data.active}, type=${data.type}` : 'null');
+
+        if (!data || !data.active) {
+          console.log('📺 TVPage: Transmisión finalizada (cleanup).');
+          setIsLive(false);
+          if (videoRef.current) videoRef.current.srcObject = null;
+          if (pcRef.current) {
+            pcRef.current.close();
+            pcRef.current = null;
+          }
+          if (unsubscribeIceRef.current) {
+            unsubscribeIceRef.current();
+            unsubscribeIceRef.current = null;
+          }
+          return;
+        }
+
+        // Si ya estamos conectados, no hacemos nada
+        if (pcRef.current && (pcRef.current.connectionState === 'connected' || pcRef.current.connectionState === 'connecting')) {
+          return;
+        }
+
+        // Solo actuamos si es una 'offer' fresca
+        if (data.type === 'offer') {
+          console.log('📺 TVPage: Offer recibida, iniciando conexión...');
+          setIsLive(true);
+          
+          if (pcRef.current) {
+            pcRef.current.close();
+            pcRef.current = null;
+          }
+          if (unsubscribeIceRef.current) {
+            unsubscribeIceRef.current();
+            unsubscribeIceRef.current = null;
+          }
+
+          const pc = new RTCPeerConnection(rtcConfig);
+          pcRef.current = pc;
+
+          pc.ontrack = (event) => {
+            console.log('📺 TVPage: ¡Pista de video recibida!');
+            if (videoRef.current && event.streams[0]) {
+              if (videoRef.current.srcObject !== event.streams[0]) {
+                videoRef.current.srcObject = event.streams[0];
+                videoRef.current.play().catch(() => {});
+              }
+            }
+          };
+
+          pc.onicecandidate = async (event) => {
+            if (event.candidate) {
+              await addDoc(collection(db, 'live_streams', 'main', 'ice_candidates_viewer'), {
+                candidate: event.candidate.toJSON(),
+                timestamp: serverTimestamp()
+              });
+            }
+          };
+
+          const unsubscribeIce = onSnapshot(collection(db, 'live_streams', 'main', 'ice_candidates_admin'), (snap) => {
+            snap.docChanges().forEach((change) => {
+              if (change.type === 'added') {
+                if (pc.signalingState !== 'closed' && pc.signalingState !== 'have-remote-pranswer') {
+                  const candData = change.doc.data();
+                  pc.addIceCandidate(new RTCIceCandidate(candData.candidate)).catch(console.error);
+                }
+              }
+            });
+          });
+          
+          unsubscribeIceRef.current = unsubscribeIce;
+
+          try {
+            await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+
+            await setDoc(doc(db, 'live_streams', 'main'), {
+              type: 'answer',
+              sdp: answer.sdp,
+              active: true,
+              timestamp: serverTimestamp()
+            }, { merge: true });
+
+            console.log('📺 TVPage: Handshake completado, esperando video...');
+
+          } catch (err) {
+            console.error('❌ Error en el handshake de WebRTC:', err);
+          }
+        }
+      });
+    };
+
+    setupWebRTC();
+
+    return () => {
+      console.log('📺 TVPage: Limpiando listeners de WebRTC...');
+      if (unsubscribeMainRef.current) unsubscribeMainRef.current();
+      if (unsubscribeIceRef.current) unsubscribeIceRef.current();
+      if (pcRef.current) pcRef.current.close();
+    };
+  }, []);
+
   useEffect(() => {
     const container = chatContainerRef.current;
     if (!container) return;
-
-    // Calculamos si el usuario está a menos de 100px del fondo
     const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
-
     if (isNearBottom) {
-      // Usamos requestAnimationFrame para asegurar que el DOM ya se actualizó con los nuevos mensajes
-      requestAnimationFrame(() => {
-        container.scrollTop = container.scrollHeight;
-      });
+      requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
     }
   }, [chatMessages]);
 
+  // ✅ Chat con diagnóstico para saber si falla el envío
   const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
-
+    
     const finalUserName = userName.trim() || 'Espectador';
-    if (!userName.trim()) {
-      setUserName(finalUserName);
-    }
+    if (!userName.trim()) setUserName(finalUserName);
     setNameConfirmed(true);
-
+    
     try {
+      console.log('Enviando mensaje:', newMessage);
       await addChatMessage(finalUserName, newMessage.trim());
+      console.log('Mensaje enviado con éxito');
       setNewMessage('');
-      // Scroll inmediato solo cuando el usuario envía su propio mensaje
       setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'auto' }), 100);
     } catch (error) {
       console.error('Error al enviar mensaje:', error);
+      alert('No se pudo enviar el mensaje. Verifique su conexión.');
     }
   };
 
@@ -97,46 +197,28 @@ export const TVPage = () => {
 
   return (
     <div className="space-y-6 py-6">
-      {/* Reproductor de Video (YouTube Embed) */}
       <div className="relative rounded-2xl overflow-hidden bg-black border border-dark-border">
-        <div className="relative w-full aspect-video bg-black">
-          {loadingTv ? (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Loader2 className="w-12 h-12 text-brand animate-spin" />
-            </div>
-          ) : videoId ? (
-            <iframe
-              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&rel=0`}
-              title="Transmisión en Vivo YouTube"
-              className="w-full h-full absolute inset-0"
-              style={{ border: "none" }}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            />
+        <div className="relative w-full aspect-video bg-black flex items-center justify-center">
+          {isLive ? (
+            <>
+              <video ref={videoRef} autoPlay playsInline controls className="w-full h-full object-contain bg-black" />
+              <div className="absolute top-4 left-4 flex items-center gap-3 pointer-events-auto z-10">
+                <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-600 text-white text-xs font-bold uppercase shadow-lg">
+                  <span className="w-2 h-2 bg-white rounded-full animate-pulse" /> EN VIVO
+                </span>
+              </div>
+            </>
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-text-secondary">
               <AlertCircle className="w-16 h-16 mb-4 text-text-muted" />
               <p className="text-xl font-semibold">No hay transmisión en vivo en este momento</p>
-              <p className="text-sm mt-2">Vuelve más tarde para ver nuestra programación.</p>
-            </div>
-          )}
-
-          {videoId && (
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
-              <div className="absolute top-4 left-4 flex items-center gap-3 pointer-events-auto">
-                <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-600 text-white text-xs font-bold uppercase">
-                  <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                  EN VIVO
-                </span>
-              </div>
+              <p className="text-sm mt-2">El administrador iniciará la señal próximamente.</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Información y Chat */}
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Información del Programa */}
         <div className="lg:col-span-2 space-y-4">
           <div className="p-6 rounded-xl bg-dark-surface border border-dark-border space-y-4">
             <div className="flex items-start justify-between">
@@ -145,104 +227,54 @@ export const TVPage = () => {
                 <p className="text-text-secondary">LA PODEROSA Televisión</p>
               </div>
               <div className="flex gap-2">
-                <button className="p-2 rounded-full bg-dark-elevated hover:bg-dark-surface transition-colors text-white">
-                  <Heart className="w-5 h-5" />
-                </button>
-                <button className="p-2 rounded-full bg-dark-elevated hover:bg-dark-surface transition-colors text-white">
-                  <Share2 className="w-5 h-5" />
-                </button>
+                <button className="p-2 rounded-full bg-dark-elevated hover:bg-dark-surface transition-colors text-white"><Heart className="w-5 h-5" /></button>
+                <button className="p-2 rounded-full bg-dark-elevated hover:bg-dark-surface transition-colors text-white"><Share2 className="w-5 h-5" /></button>
               </div>
             </div>
-
             <div className="flex flex-wrap gap-4 text-sm text-text-secondary">
-              <div className="flex items-center gap-2">
-                <Radio className="w-4 h-4 text-brand" />
-                <span>Señal en vivo</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-brand" />
-                <span>Espectadores conectados</span>
-              </div>
+              <div className="flex items-center gap-2"><Radio className="w-4 h-4 text-brand" /><span>Señal en vivo</span></div>
+              <div className="flex items-center gap-2"><Users className="w-4 h-4 text-brand" /><span>Espectadores conectados</span></div>
             </div>
-
-            <p className="text-text-secondary">
-              Disfruta de nuestra programación en vivo con la mejor calidad de video y sonido. 
-              Interactúa con nosotros a través del chat en tiempo real.
-            </p>
+            <p className="text-text-secondary">Disfruta de nuestra programación en vivo con la mejor calidad de video y sonido. Interactúa con nosotros a través del chat en tiempo real.</p>
           </div>
         </div>
 
-        {/* Chat en Vivo REAL */}
         <div className="space-y-4">
           <div className="rounded-xl bg-dark-surface border border-dark-border overflow-hidden">
             <div className="p-4 border-b border-dark-border flex items-center justify-between">
-              <h3 className="font-semibold text-white flex items-center gap-2">
-                <MessageCircle className="w-5 h-5 text-brand" />
-                Chat en Vivo
-              </h3>
-              <button 
-                onClick={() => setShowChat(!showChat)}
-                className="text-sm text-text-secondary hover:text-white transition-colors"
-              >
-                {showChat ? 'Ocultar' : 'Mostrar'}
-              </button>
+              <h3 className="font-semibold text-white flex items-center gap-2"><MessageCircle className="w-5 h-5 text-brand" />Chat en Vivo</h3>
+              <button onClick={() => setShowChat(!showChat)} className="text-sm text-text-secondary hover:text-white transition-colors">{showChat ? 'Ocultar' : 'Mostrar'}</button>
             </div>
-
             {showChat && (
               <>
-                {/* ✅ NUEVO: Se agregó ref={chatContainerRef} para medir el scroll */}
-                <div 
-                  ref={chatContainerRef}
-                  className="h-96 overflow-y-auto p-4 space-y-3"
-                >
-                  {chatMessages.length === 0 ? (
-                    <p className="text-text-secondary text-sm text-center py-4">Sé el primero en saludar.</p>
-                  ) : (
-                    chatMessages.map((msg) => (
-                      <div key={msg.id} className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-brand/20 flex items-center justify-center text-xs font-bold text-brand flex-shrink-0">
-                          {msg.usuario.charAt(0).toUpperCase()}
+                {loading ? (
+                  <div className="h-96 flex items-center justify-center"><Loader2 className="w-8 h-8 text-brand animate-spin" /></div>
+                ) : (
+                  <div ref={chatContainerRef} className="h-96 overflow-y-auto p-4 space-y-3">
+                    {chatMessages.length === 0 ? (
+                      <p className="text-text-secondary text-sm text-center py-4">Sé el primero en saludar.</p>
+                    ) : (
+                      chatMessages.map((msg) => (
+                        <div key={msg.id} className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-full bg-brand/20 flex items-center justify-center text-xs font-bold text-brand flex-shrink-0">{msg.usuario.charAt(0).toUpperCase()}</div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm"><span className="font-semibold text-white">{msg.usuario}</span>{' '}<span className="text-text-secondary">{msg.mensaje}</span></p>
+                            <p className="text-xs text-text-muted mt-1">{formatTime(msg.timestamp)}</p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm">
-                            <span className="font-semibold text-white">{msg.usuario}</span>{' '}
-                            <span className="text-text-secondary">{msg.mensaje}</span>
-                          </p>
-                          <p className="text-xs text-text-muted mt-1">{formatTime(msg.timestamp)}</p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                  <div ref={chatEndRef} />
-                </div>
-
+                      ))
+                    )}
+                    <div ref={chatEndRef} />
+                  </div>
+                )}
                 <div className="p-4 border-t border-dark-border">
                   <form onSubmit={handleSendMessage} className="space-y-2">
                     {!nameConfirmed && (
-                      <input
-                        type="text"
-                        value={userName}
-                        onChange={(e) => setUserName(e.target.value)}
-                        placeholder="Tu nombre"
-                        className="w-full px-3 py-2 rounded-lg bg-dark-bg border border-dark-border text-white text-sm placeholder:text-text-muted focus:border-brand focus:outline-none"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                          }
-                        }}
-                      />
+                      <input type="text" value={userName} onChange={(e) => setUserName(e.target.value)} placeholder="Tu nombre" className="w-full px-3 py-2 rounded-lg bg-dark-bg border border-dark-border text-white text-sm placeholder:text-text-muted focus:border-brand focus:outline-none" onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }} />
                     )}
                     <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="Escribe un mensaje..."
-                        className="flex-1 px-3 py-2 rounded-lg bg-dark-bg border border-dark-border text-white text-sm placeholder:text-text-muted focus:border-brand focus:outline-none"
-                      />
-                      <button type="submit" className="p-2 rounded-lg bg-brand hover:bg-brand-light text-white transition-colors">
-                        <Send className="w-4 h-4" />
-                      </button>
+                      <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Escribe un mensaje..." className="flex-1 px-3 py-2 rounded-lg bg-dark-bg border border-dark-border text-white text-sm placeholder:text-text-muted focus:border-brand focus:outline-none" />
+                      <button type="submit" className="p-2 rounded-lg bg-brand hover:bg-brand-light text-white transition-colors"><Send className="w-4 h-4" /></button>
                     </div>
                   </form>
                 </div>
