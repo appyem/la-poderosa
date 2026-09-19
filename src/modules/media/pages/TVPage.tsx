@@ -4,9 +4,9 @@ import { MessageCircle, Heart, Share2, Users, Radio, Send, Loader2, AlertCircle 
 import { getChatMessages, addChatMessage, type ChatMessage } from '../../../core/firebase/services';
 import { Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config'; 
-import { doc, onSnapshot, collection, addDoc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection, addDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import type { Unsubscribe } from 'firebase/firestore';
-import { HLSVideoPlayer } from '../../../components/HLSVideoPlayer'; // ✅ Ruta corregida
+import { HLSVideoPlayer } from '../../../components/HLSVideoPlayer';
 
 export const TVPage = () => {
   const [currentTime, setCurrentTime] = useState(() => Date.now());
@@ -76,7 +76,7 @@ export const TVPage = () => {
         }
       } else {
         setStreamMode('offline');
-        cleanupWebRTC(); // ✅ Ahora sí puede llamarse porque ya fue declarada arriba
+        cleanupWebRTC();
       }
     });
 
@@ -85,12 +85,16 @@ export const TVPage = () => {
     };
   }, []);
 
-  // ✅ 2. Lógica WebRTC (Solo si el modo es 'webrtc')
+  // ✅ 2. Lógica WebRTC con servidor TURN para todas las redes
   useEffect(() => {
-    if (streamMode !== 'webrtc') return;
+    if (streamMode !== 'webrtc') {
+      cleanupWebRTC();
+      return;
+    }
 
     const viewerId = `viewer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const rtcConfig: RTCConfiguration = {
+    
+    const rtcConfig: RTCConfiguration = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
@@ -102,24 +106,9 @@ export const TVPage = () => {
       ]
     };
 
-    const subscribeAsViewer = async () => {
-      const viewerDocRef = doc(db, 'live_streams', 'sessions', 'viewers', viewerId);
-      await setDoc(viewerDocRef, { joined: serverTimestamp(), userAgent: navigator.userAgent });
+    const viewerDocRef = doc(db, 'live_streams', 'sessions', 'viewers', viewerId);
 
-      unsubscribeViewerRef.current = onSnapshot(viewerDocRef, async (snapshot) => {
-        const data = snapshot.data();
-        if (data?.offer && !pcRef.current) {
-          await connectToStream(data.offer, rtcConfig);
-        }
-      });
-
-      getDoc(doc(db, 'live_streams', 'main')).then((snap) => {
-        if (snap.exists() && snap.data()?.type === 'offer') {
-           subscribeAsViewer(); 
-        }
-      });
-    };
-
+    // ✅ MOVIDO ARRIBA para evitar el error de "accedido antes de ser declarado"
     const connectToStream = async (offer: { sdp: string; type: string }, config: RTCConfiguration) => {
       const pc = new RTCPeerConnection(config);
       pcRef.current = pc;
@@ -159,11 +148,22 @@ export const TVPage = () => {
       }
     };
 
+    const subscribeAsViewer = async () => {
+      await setDoc(viewerDocRef, { joined: serverTimestamp(), userAgent: navigator.userAgent });
+
+      unsubscribeViewerRef.current = onSnapshot(viewerDocRef, async (snapshot) => {
+        const data = snapshot.data();
+        if (data?.offer && !pcRef.current) {
+          await connectToStream(data.offer, rtcConfig);
+        }
+      });
+    };
+
     subscribeAsViewer();
 
     return () => {
       cleanupWebRTC();
-      deleteDoc(doc(db, 'live_streams', 'sessions', 'viewers', viewerId)).catch(() => {});
+      deleteDoc(viewerDocRef).catch(() => {});
     };
   }, [streamMode]);
 
