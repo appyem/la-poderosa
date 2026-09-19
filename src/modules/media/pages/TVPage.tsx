@@ -20,7 +20,6 @@ export const TVPage = () => {
   const [streamMode, setStreamMode] = useState<'webrtc' | 'hls' | 'offline'>('offline');
   const [hlsSrc, setHlsSrc] = useState('');
   
-  // ✅ Estados para el diagnóstico en pantalla
   const [connectionStatus, setConnectionStatus] = useState<'waiting' | 'connecting' | 'connected' | 'failed'>('waiting');
   const [hasVideo, setHasVideo] = useState(false);
 
@@ -68,7 +67,6 @@ export const TVPage = () => {
     return () => clearInterval(chatInterval);
   }, []);
 
-  // ✅ 1. Escuchar el modo (HLS o WebRTC). La lógica de YoloBox está intacta.
   useEffect(() => {
     unsubscribeSettingsRef.current = onSnapshot(doc(db, 'live_streams', 'settings'), (snapshot) => {
       const data = snapshot.data();
@@ -88,7 +86,6 @@ export const TVPage = () => {
     };
   }, []);
 
-  // ✅ 2. Lógica WebRTC con diagnóstico. setState movido DENTRO del callback para satisfacer al linter.
   useEffect(() => {
     if (streamMode !== 'webrtc') {
       cleanupWebRTC();
@@ -110,64 +107,93 @@ export const TVPage = () => {
     const mainDocRef = doc(db, 'live_streams', 'main');
     let isFirstSnapshot = true;
     
-    unsubscribeViewerRef.current = onSnapshot(mainDocRef, async (snapshot) => {
-      // ✅ setState dentro de un callback es permitido por el linter de React
-      if (isFirstSnapshot) {
-        setConnectionStatus('waiting');
-        setHasVideo(false);
-        isFirstSnapshot = false;
-      }
-
-      const data = snapshot.data();
-      
-      if (data && data.type === 'offer' && !pcRef.current) {
-        setConnectionStatus('connecting');
-        const pc = new RTCPeerConnection(rtcConfig);
-        pcRef.current = pc;
-
-        pc.ontrack = (event) => {
-          if (videoRef.current && event.streams[0]) {
-            videoRef.current.srcObject = event.streams[0];
-            videoRef.current.play().catch((e) => console.error('Error play:', e));
-            setHasVideo(true);
-            setConnectionStatus('connected');
-          }
-        };
-
-        pc.onicecandidate = async (event) => {
-          if (event.candidate) {
-            await addDoc(collection(db, 'live_streams', 'main', 'ice_candidates_viewer'), {
-              candidate: event.candidate.toJSON(),
-              timestamp: serverTimestamp()
-            });
-          }
-        };
-
-        unsubscribeIceRef.current = onSnapshot(collection(db, 'live_streams', 'main', 'ice_candidates_admin'), (snap) => {
-          snap.docChanges().forEach((change) => {
-            if (change.type === 'added' && pc.signalingState !== 'closed') {
-              pc.addIceCandidate(new RTCIceCandidate(change.doc.data().candidate)).catch(console.error);
-            }
-          });
-        });
-
-        try {
-          await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          await setDoc(mainDocRef, { type: 'answer', sdp: answer.sdp }, { merge: true });
-        } catch (err) {
-          console.error('❌ Error handshake:', err);
-          setConnectionStatus('failed');
+    console.log("📺 TV: Iniciando escucha de live_streams/main...");
+    
+    // ✅ CORRECCIÓN: Se agregó 'async' aquí para permitir los 'await' internos
+    unsubscribeViewerRef.current = onSnapshot(
+      mainDocRef, 
+      async (snapshot) => {
+        if (snapshot.metadata.hasPendingWrites) {
+          console.log("📺 TV: Esperando confirmación de escritura...");
         }
+        
+        if (!snapshot.exists()) {
+          console.log("⚠️ TV: El documento live_streams/main NO EXISTE aún.");
+          if (isFirstSnapshot) {
+            setConnectionStatus('waiting');
+            setHasVideo(false);
+            isFirstSnapshot = false;
+          }
+          return;
+        }
+
+        const data = snapshot.data();
+        console.log("✅ TV: Snapshot recibido con datos:", data);
+
+        if (isFirstSnapshot) {
+          setConnectionStatus('waiting');
+          setHasVideo(false);
+          isFirstSnapshot = false;
+        }
+
+        if (data && data.type === 'offer' && !pcRef.current) {
+          console.log("🎬 TV: ¡OFERTA DETECTADA! Iniciando conexión...");
+          setConnectionStatus('connecting');
+          const pc = new RTCPeerConnection(rtcConfig);
+          pcRef.current = pc;
+
+                    pc.ontrack = (event) => {
+            if (videoRef.current && event.streams[0]) {
+              videoRef.current.srcObject = event.streams[0];
+              videoRef.current.muted = true; // ✅ Silenciar para permitir autoplay
+              videoRef.current.play()
+                .then(() => {
+                  console.log('✅ Video reproduciéndose correctamente');
+                  setHasVideo(true);
+                  setConnectionStatus('connected');
+                })
+                .catch((e) => console.error('Error play:', e));
+            }
+          };
+
+          pc.onicecandidate = async (event) => {
+            if (event.candidate) {
+              await addDoc(collection(db, 'live_streams', 'main', 'ice_candidates_viewer'), {
+                candidate: event.candidate.toJSON(),
+                timestamp: serverTimestamp()
+              });
+            }
+          };
+
+          unsubscribeIceRef.current = onSnapshot(collection(db, 'live_streams', 'main', 'ice_candidates_admin'), (snap) => {
+            snap.docChanges().forEach((change) => {
+              if (change.type === 'added' && pc.signalingState !== 'closed') {
+                pc.addIceCandidate(new RTCIceCandidate(change.doc.data().candidate)).catch(console.error);
+              }
+            });
+          });
+
+          try {
+            await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            await setDoc(mainDocRef, { type: 'answer', sdp: answer.sdp }, { merge: true });
+          } catch (err) {
+            console.error('❌ Error handshake:', err);
+            setConnectionStatus('failed');
+          }
+        }
+        
+        if (!data || !data.active) {
+          cleanupWebRTC();
+          setConnectionStatus('waiting');
+          setHasVideo(false);
+        }
+      },
+      (error) => {
+        console.error("❌ TV: ERROR DE FIRESTORE AL LEER:", error);
       }
-      
-      if (!data || !data.active) {
-        cleanupWebRTC();
-        setConnectionStatus('waiting');
-        setHasVideo(false);
-      }
-    });
+    );
 
     return () => {
       cleanupWebRTC();
@@ -209,7 +235,6 @@ export const TVPage = () => {
       <div className="relative rounded-2xl overflow-hidden bg-black border border-dark-border">
         <div className="relative w-full aspect-video bg-black flex items-center justify-center">
           
-          {/* ✅ CUADRO DE DIAGNÓSTICO SEGURO */}
           {streamMode === 'webrtc' && (
             <div className="absolute top-20 left-4 bg-black/90 text-green-400 p-4 rounded text-sm font-mono z-50 border-2 border-green-500 shadow-xl">
               <p className="font-bold mb-2 text-white">🔍 DIAGNÓSTICO EN VIVO:</p>
@@ -230,7 +255,7 @@ export const TVPage = () => {
             </>
           ) : streamMode === 'webrtc' ? (
             <>
-              <video ref={videoRef} autoPlay playsInline controls className="w-full h-full object-contain bg-black" />
+              <video ref={videoRef} autoPlay muted playsInline controls className="w-full h-full object-contain bg-black" />
               <div className="absolute top-4 left-4 flex items-center gap-3 pointer-events-auto z-10">
                 <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-600 text-white text-xs font-bold uppercase shadow-lg">
                   <span className="w-2 h-2 bg-white rounded-full animate-pulse" /> EN VIVO
