@@ -15,10 +15,15 @@ export const StreamingPage = () => {
   const unsubscribeAnswerRef = useRef<Unsubscribe | null>(null);
   const unsubscribeIceRef = useRef<Unsubscribe | null>(null);
 
-  const rtcConfig: RTCConfiguration = {
+    const rtcConfig: RTCConfiguration = {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' }
+      { urls: 'stun:stun1.l.google.com:19302' },
+      {
+        urls: 'turn:stream.lapoderosa.co:3478',
+        username: 'lapoderosa',
+        credential: 'LaPoderosaTurn2024!'
+      }
     ]
   };
 

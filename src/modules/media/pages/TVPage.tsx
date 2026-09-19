@@ -90,10 +90,15 @@ export const TVPage = () => {
     if (streamMode !== 'webrtc') return;
 
     const viewerId = `viewer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const rtcConfig: RTCConfiguration = {
+        const rtcConfig: RTCConfiguration = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
+        { urls: 'stun:stun1.l.google.com:19302' },
+        {
+          urls: 'turn:stream.lapoderosa.co:3478',
+          username: 'lapoderosa',
+          credential: 'LaPoderosaTurn2024!'
+        }
       ]
     };
 
