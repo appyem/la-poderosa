@@ -4,7 +4,7 @@ import { MessageCircle, Heart, Share2, Users, Radio, Send, Loader2, AlertCircle 
 import { getChatMessages, addChatMessage, type ChatMessage } from '../../../core/firebase/services';
 import { Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config'; 
-import { doc, onSnapshot, collection, addDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection, addDoc, setDoc } from 'firebase/firestore';
 import type { Unsubscribe } from 'firebase/firestore';
 import { HLSVideoPlayer } from '../../../components/HLSVideoPlayer';
 
@@ -28,7 +28,7 @@ export const TVPage = () => {
   const unsubscribeViewerRef = useRef<Unsubscribe | null>(null);
   const unsubscribeSettingsRef = useRef<Unsubscribe | null>(null);
 
-  // ✅ MOVIDO ARRIBA para evitar el error de "accedido antes de ser declarado"
+  // ✅ 1. Función de limpieza declarada ARRIBA para evitar errores de referencia
   const cleanupWebRTC = () => {
     if (videoRef.current) videoRef.current.srcObject = null;
     if (pcRef.current) { 
@@ -65,7 +65,7 @@ export const TVPage = () => {
     return () => clearInterval(chatInterval);
   }, []);
 
-  // ✅ 1. Escuchar la configuración del administrador
+  // ✅ 2. Escuchar el modo de transmisión (HLS o WebRTC)
   useEffect(() => {
     unsubscribeSettingsRef.current = onSnapshot(doc(db, 'live_streams', 'settings'), (snapshot) => {
       const data = snapshot.data();
@@ -85,15 +85,13 @@ export const TVPage = () => {
     };
   }, []);
 
-  // ✅ 2. Lógica WebRTC con servidor TURN para todas las redes
+  // ✅ 3. Lógica WebRTC CORREGIDA: Escucha exactamente donde el Admin publica la oferta ('main')
   useEffect(() => {
     if (streamMode !== 'webrtc') {
       cleanupWebRTC();
       return;
     }
 
-    const viewerId = `viewer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
     const rtcConfig: RTCConfiguration = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -106,64 +104,69 @@ export const TVPage = () => {
       ]
     };
 
-    const viewerDocRef = doc(db, 'live_streams', 'sessions', 'viewers', viewerId);
+    const mainDocRef = doc(db, 'live_streams', 'main');
+    
+    // Escuchar el documento 'main' donde el Admin pone la oferta
+    unsubscribeViewerRef.current = onSnapshot(mainDocRef, async (snapshot) => {
+      const data = snapshot.data();
+      
+      // Si hay una oferta y aún no hemos creado la conexión
+      if (data && data.type === 'offer' && !pcRef.current) {
+        console.log('🎬 TVPage: ¡OFERTA RECIBIDA de main! Iniciando conexión...');
+        
+        const pc = new RTCPeerConnection(rtcConfig);
+        pcRef.current = pc;
 
-    // ✅ MOVIDO ARRIBA para evitar el error de "accedido antes de ser declarado"
-    const connectToStream = async (offer: { sdp: string; type: string }, config: RTCConfiguration) => {
-      const pc = new RTCPeerConnection(config);
-      pcRef.current = pc;
-
-      pc.ontrack = (event) => {
-        if (videoRef.current && event.streams[0]) {
-          if (videoRef.current.srcObject !== event.streams[0]) {
+        pc.ontrack = (event) => {
+          console.log('🎉 TVPage: ¡PISTA DE VIDEO RECIBIDA EXITOSAMENTE!');
+          if (videoRef.current && event.streams[0]) {
             videoRef.current.srcObject = event.streams[0];
-            videoRef.current.play().catch(() => {});
+            videoRef.current.play().catch((e) => console.error('Error al reproducir:', e));
           }
-        }
-      };
+        };
 
-      pc.onicecandidate = async (event) => {
-        if (event.candidate) {
-          await addDoc(collection(db, 'live_streams', 'sessions', 'viewers', viewerId, 'ice_candidates_viewer'), {
-            candidate: event.candidate.toJSON(), timestamp: serverTimestamp()
+        pc.onicecandidate = async (event) => {
+          if (event.candidate) {
+            await addDoc(collection(db, 'live_streams', 'main', 'ice_candidates_viewer'), {
+              candidate: event.candidate.toJSON(),
+              timestamp: serverTimestamp()
+            });
+          }
+        };
+
+        unsubscribeIceRef.current = onSnapshot(collection(db, 'live_streams', 'main', 'ice_candidates_admin'), (snap) => {
+          snap.docChanges().forEach((change) => {
+            if (change.type === 'added' && pc.signalingState !== 'closed') {
+              pc.addIceCandidate(new RTCIceCandidate(change.doc.data().candidate)).catch(console.error);
+            }
           });
-        }
-      };
-
-      unsubscribeIceRef.current = onSnapshot(collection(db, 'live_streams', 'sessions', 'viewers', viewerId, 'ice_candidates_admin'), (snap) => {
-        snap.docChanges().forEach((change) => {
-          if (change.type === 'added' && pc.signalingState !== 'closed') {
-            pc.addIceCandidate(new RTCIceCandidate(change.doc.data().candidate)).catch(console.error);
-          }
         });
-      });
 
-      try {
-        await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: offer.sdp }));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        await setDoc(doc(db, 'live_streams', 'sessions', 'viewers', viewerId), { answer: { sdp: answer.sdp, type: 'answer' } }, { merge: true });
-      } catch (err) {
-        console.error('❌ Error en handshake WebRTC:', err);
-      }
-    };
-
-    const subscribeAsViewer = async () => {
-      await setDoc(viewerDocRef, { joined: serverTimestamp(), userAgent: navigator.userAgent });
-
-      unsubscribeViewerRef.current = onSnapshot(viewerDocRef, async (snapshot) => {
-        const data = snapshot.data();
-        if (data?.offer && !pcRef.current) {
-          await connectToStream(data.offer, rtcConfig);
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          
+          // Enviar la respuesta al documento 'main' para que el Admin la lea
+          await setDoc(mainDocRef, { 
+            type: 'answer', 
+            sdp: answer.sdp 
+          }, { merge: true });
+          
+          console.log('📤 TVPage: Respuesta enviada al administrador');
+        } catch (err) {
+          console.error('❌ Error en handshake WebRTC:', err);
         }
-      });
-    };
-
-    subscribeAsViewer();
+      }
+      
+      // Si el admin detiene la transmisión
+      if (!data || !data.active) {
+        cleanupWebRTC();
+      }
+    });
 
     return () => {
       cleanupWebRTC();
-      deleteDoc(viewerDocRef).catch(() => {});
     };
   }, [streamMode]);
 
