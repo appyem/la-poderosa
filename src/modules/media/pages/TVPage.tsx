@@ -19,6 +19,10 @@ export const TVPage = () => {
   
   const [streamMode, setStreamMode] = useState<'webrtc' | 'hls' | 'offline'>('offline');
   const [hlsSrc, setHlsSrc] = useState('');
+  
+  // ✅ Estados para el diagnóstico en pantalla
+  const [connectionStatus, setConnectionStatus] = useState<'waiting' | 'connecting' | 'connected' | 'failed'>('waiting');
+  const [hasVideo, setHasVideo] = useState(false);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -28,7 +32,6 @@ export const TVPage = () => {
   const unsubscribeViewerRef = useRef<Unsubscribe | null>(null);
   const unsubscribeSettingsRef = useRef<Unsubscribe | null>(null);
 
-  // ✅ 1. Función de limpieza declarada ARRIBA para evitar errores de referencia
   const cleanupWebRTC = () => {
     if (videoRef.current) videoRef.current.srcObject = null;
     if (pcRef.current) { 
@@ -65,7 +68,7 @@ export const TVPage = () => {
     return () => clearInterval(chatInterval);
   }, []);
 
-  // ✅ 2. Escuchar el modo de transmisión (HLS o WebRTC)
+  // ✅ 1. Escuchar el modo (HLS o WebRTC). La lógica de YoloBox está intacta.
   useEffect(() => {
     unsubscribeSettingsRef.current = onSnapshot(doc(db, 'live_streams', 'settings'), (snapshot) => {
       const data = snapshot.data();
@@ -85,7 +88,7 @@ export const TVPage = () => {
     };
   }, []);
 
-  // ✅ 3. Lógica WebRTC CORREGIDA: Escucha exactamente donde el Admin publica la oferta ('main')
+  // ✅ 2. Lógica WebRTC con diagnóstico. setState movido DENTRO del callback para satisfacer al linter.
   useEffect(() => {
     if (streamMode !== 'webrtc') {
       cleanupWebRTC();
@@ -105,23 +108,29 @@ export const TVPage = () => {
     };
 
     const mainDocRef = doc(db, 'live_streams', 'main');
+    let isFirstSnapshot = true;
     
-    // Escuchar el documento 'main' donde el Admin pone la oferta
     unsubscribeViewerRef.current = onSnapshot(mainDocRef, async (snapshot) => {
+      // ✅ setState dentro de un callback es permitido por el linter de React
+      if (isFirstSnapshot) {
+        setConnectionStatus('waiting');
+        setHasVideo(false);
+        isFirstSnapshot = false;
+      }
+
       const data = snapshot.data();
       
-      // Si hay una oferta y aún no hemos creado la conexión
       if (data && data.type === 'offer' && !pcRef.current) {
-        console.log('🎬 TVPage: ¡OFERTA RECIBIDA de main! Iniciando conexión...');
-        
+        setConnectionStatus('connecting');
         const pc = new RTCPeerConnection(rtcConfig);
         pcRef.current = pc;
 
         pc.ontrack = (event) => {
-          console.log('🎉 TVPage: ¡PISTA DE VIDEO RECIBIDA EXITOSAMENTE!');
           if (videoRef.current && event.streams[0]) {
             videoRef.current.srcObject = event.streams[0];
-            videoRef.current.play().catch((e) => console.error('Error al reproducir:', e));
+            videoRef.current.play().catch((e) => console.error('Error play:', e));
+            setHasVideo(true);
+            setConnectionStatus('connected');
           }
         };
 
@@ -146,22 +155,17 @@ export const TVPage = () => {
           await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
-          
-          // Enviar la respuesta al documento 'main' para que el Admin la lea
-          await setDoc(mainDocRef, { 
-            type: 'answer', 
-            sdp: answer.sdp 
-          }, { merge: true });
-          
-          console.log('📤 TVPage: Respuesta enviada al administrador');
+          await setDoc(mainDocRef, { type: 'answer', sdp: answer.sdp }, { merge: true });
         } catch (err) {
-          console.error('❌ Error en handshake WebRTC:', err);
+          console.error('❌ Error handshake:', err);
+          setConnectionStatus('failed');
         }
       }
       
-      // Si el admin detiene la transmisión
       if (!data || !data.active) {
         cleanupWebRTC();
+        setConnectionStatus('waiting');
+        setHasVideo(false);
       }
     });
 
@@ -205,6 +209,16 @@ export const TVPage = () => {
       <div className="relative rounded-2xl overflow-hidden bg-black border border-dark-border">
         <div className="relative w-full aspect-video bg-black flex items-center justify-center">
           
+          {/* ✅ CUADRO DE DIAGNÓSTICO SEGURO */}
+          {streamMode === 'webrtc' && (
+            <div className="absolute top-20 left-4 bg-black/90 text-green-400 p-4 rounded text-sm font-mono z-50 border-2 border-green-500 shadow-xl">
+              <p className="font-bold mb-2 text-white">🔍 DIAGNÓSTICO EN VIVO:</p>
+              <p>1. Modo: {streamMode}</p>
+              <p>2. Conexión: {connectionStatus.toUpperCase()}</p>
+              <p>3. Video: {hasVideo ? 'RECIBIDO ✅' : 'SIN SEÑAL ❌'}</p>
+            </div>
+          )}
+
           {streamMode === 'hls' ? (
             <>
               <HLSVideoPlayer src={hlsSrc} />
