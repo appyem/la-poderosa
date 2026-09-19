@@ -9,13 +9,12 @@ export const StreamingPage = () => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [status, setStatus] = useState('Sistema listo para transmitir');
   
-  // Estados para WebRTC
   const streamRef = useRef<MediaStream | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const unsubscribeAnswerRef = useRef<Unsubscribe | null>(null);
   const unsubscribeIceRef = useRef<Unsubscribe | null>(null);
 
-    const rtcConfig: RTCConfiguration = {
+  const rtcConfig: RTCConfiguration = {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
@@ -27,16 +26,18 @@ export const StreamingPage = () => {
     ]
   };
 
-  // Iniciar WebRTC (Captura de pantalla)
   const startWebRTC = async () => {
     try {
+      console.log("🔍 PASO 1: Actualizando Firebase settings a webrtc...");
       await setDoc(doc(db, 'live_streams', 'settings'), { mode: 'webrtc', active: true });
       setStatus('Solicitando permiso de captura...');
       
+      console.log("🔍 PASO 2: Solicitando permiso de pantalla al navegador...");
       const stream = await navigator.mediaDevices.getDisplayMedia({ 
         video: { frameRate: { ideal: 30, max: 30 } }, 
         audio: true 
       });
+      console.log("✅ PASO 2 COMPLETADO: Permiso de pantalla obtenido.");
 
       streamRef.current = stream;
       const videoTrack = stream.getVideoTracks()[0];
@@ -44,6 +45,7 @@ export const StreamingPage = () => {
       videoTrack.onended = () => stopStream();
 
       setStatus('Conectando señal en vivo...');
+      console.log("🔍 PASO 3: Creando RTCPeerConnection...");
       const pc = new RTCPeerConnection(rtcConfig);
       pcRef.current = pc;
 
@@ -51,6 +53,7 @@ export const StreamingPage = () => {
 
       pc.onicecandidate = async (event) => {
         if (event.candidate) {
+          console.log("🔍 PASO 4: Enviando ICE candidate a Firebase...");
           await addDoc(collection(db, 'live_streams', 'main', 'ice_candidates_admin'), {
             candidate: event.candidate.toJSON(),
             timestamp: serverTimestamp()
@@ -58,6 +61,7 @@ export const StreamingPage = () => {
         }
       };
 
+      console.log("🔍 PASO 5: Configurando listener para ICE candidates del viewer...");
       unsubscribeIceRef.current = onSnapshot(collection(db, 'live_streams', 'main', 'ice_candidates_viewer'), (snapshot) => {
         snapshot.docChanges().forEach((change) => {
           if (change.type === 'added' && pcRef.current && pcRef.current.signalingState !== 'closed') {
@@ -67,19 +71,23 @@ export const StreamingPage = () => {
         });
       });
 
+      console.log("🔍 PASO 6: Creando oferta SDP...");
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
+      console.log("🔍 PASO 7: Guardando oferta en Firebase (live_streams/main)...");
       await setDoc(doc(db, 'live_streams', 'main'), {
         type: 'offer',
         sdp: offer.sdp,
         active: true,
         timestamp: serverTimestamp()
       });
+      console.log("✅ PASO 7 COMPLETADO: Oferta guardada en Firebase. Esperando respuesta del viewer...");
 
       unsubscribeAnswerRef.current = onSnapshot(doc(db, 'live_streams', 'main'), async (snapshot) => {
         const data = snapshot.data();
         if (data && data.type === 'answer' && pcRef.current && pcRef.current.signalingState === 'have-local-offer') {
+          console.log("✅ PASO 8: Respuesta del viewer recibida. Estableciendo conexión...");
           await pcRef.current.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: data.sdp }));
           setStatus('🔴 TRANSMITIENDO (Captura de Pantalla)');
           setIsStreaming(true);
@@ -87,12 +95,11 @@ export const StreamingPage = () => {
       });
 
     } catch (error) {
-      console.error('❌ Error al iniciar stream:', error);
+      console.error('❌ ERROR FATAL al iniciar stream:', error);
       setStatus('Error: ' + (error as Error).message);
     }
   };
 
-  // Activar modo YoloBox/OBS (HLS)
   const activateHLS = async () => {
     try {
       await setDoc(doc(db, 'live_streams', 'settings'), { 
@@ -107,7 +114,6 @@ export const StreamingPage = () => {
     }
   };
 
-  // Detener cualquier transmisión
   const stopStream = async () => {
     if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
     if (unsubscribeAnswerRef.current) {
@@ -148,7 +154,6 @@ export const StreamingPage = () => {
       <div className="max-w-2xl">
         <div className="p-6 rounded-xl bg-dark-surface border border-dark-border">
           
-          {/* Selector de Modo */}
           <div className="flex gap-2 mb-6 p-1 bg-dark-bg rounded-lg">
             <button 
               onClick={() => !isStreaming && setStreamMode('webrtc')}
