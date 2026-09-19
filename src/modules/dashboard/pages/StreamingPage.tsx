@@ -31,7 +31,6 @@ export const StreamingPage = () => {
       await setDoc(doc(db, 'live_streams', 'settings'), { mode: 'webrtc', active: true });
       setStatus('Solicitando permiso de captura...');
       
-      // ✅ SOLUCIÓN RESOLUCIÓN: Solicitar explícitamente Full HD
       const stream = await navigator.mediaDevices.getDisplayMedia({ 
         video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30, max: 30 } }, 
         audio: true 
@@ -47,7 +46,6 @@ export const StreamingPage = () => {
       pcRef.current = pc;
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-      // 1. Publicar la OFERTA MAESTRA (Persistente, nunca se sobrescribe)
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       await setDoc(doc(db, 'live_streams', 'main'), {
@@ -57,17 +55,16 @@ export const StreamingPage = () => {
         timestamp: serverTimestamp()
       });
 
-      // 2. Escuchar nuevos espectadores que envían su respuesta
       unsubscribeViewerRef.current = onSnapshot(collection(db, 'live_streams', 'viewers'), (snapshot) => {
         snapshot.docChanges().forEach(async (change) => {
           const viewerId = change.doc.id;
           const data = change.doc.data();
 
-                    if ((change.type === 'added' || change.type === 'modified') && data?.type === 'answer') {
-            const pc = pcRef.current;
-            if (pc && pc.signalingState === 'have-local-offer') {
+          if ((change.type === 'added' || change.type === 'modified') && data?.type === 'answer') {
+            const currentPc = pcRef.current;
+            if (currentPc && currentPc.signalingState === 'have-local-offer') {
               try {
-                await pc.setRemoteDescription(new RTCSessionDescription({
+                await currentPc.setRemoteDescription(new RTCSessionDescription({
                   type: 'answer',
                   sdp: data.sdp
                 }));
@@ -76,8 +73,8 @@ export const StreamingPage = () => {
 
                 const unsubIce = onSnapshot(collection(db, 'live_streams', 'viewers', viewerId, 'ice_viewer'), (iceSnap) => {
                   iceSnap.docChanges().forEach((iceChange) => {
-                    if (iceChange.type === 'added' && pc.signalingState !== 'closed') {
-                      pc.addIceCandidate(new RTCIceCandidate(iceChange.doc.data().candidate)).catch(console.error);
+                    if (iceChange.type === 'added' && currentPc.signalingState !== 'closed') {
+                      currentPc.addIceCandidate(new RTCIceCandidate(iceChange.doc.data().candidate)).catch(console.error);
                     }
                   });
                 });
@@ -96,7 +93,6 @@ export const StreamingPage = () => {
         });
       });
 
-      // 3. Cuando el Admin genera un candidato ICE, enviarlo a TODOS los espectadores activos
       pc.onicecandidate = async (event) => {
         if (event.candidate) {
           const candidateData = { candidate: event.candidate.toJSON(), timestamp: serverTimestamp() };
@@ -130,8 +126,8 @@ export const StreamingPage = () => {
   const stopStream = async () => {
     if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
     
-    // Limpiar listeners de todos los espectadores
-    activeViewers.current.forEach((unsub) => unsub());
+    const viewersToClean = activeViewers.current;
+    viewersToClean.forEach((unsub) => unsub());
     activeViewers.current.clear();
     
     if (unsubscribeViewerRef.current) {
@@ -143,10 +139,8 @@ export const StreamingPage = () => {
       pcRef.current = null;
     }
     
-    // 1. Eliminar la oferta maestra
     await deleteDoc(doc(db, 'live_streams', 'main'));
     
-    // 2. Limpiar la colección de viewers para no dejar basura en la base de datos
     try {
       const viewersSnap = await getDocs(collection(db, 'live_streams', 'viewers'));
       const batch = writeBatch(db);
@@ -159,19 +153,16 @@ export const StreamingPage = () => {
     }
 
     await setDoc(doc(db, 'live_streams', 'settings'), { mode: streamMode, active: false });
-    
     setIsStreaming(false);
     setStatus('Sistema listo para transmitir');
   };
 
-      useEffect(() => {
-    // 1. Capturar las referencias actuales ANTES del return (esto satisface al linter)
+  useEffect(() => {
     const viewersToClean = activeViewers.current;
     const viewerUnsub = unsubscribeViewerRef.current;
     const currentPc = pcRef.current;
 
     return () => {
-      // 2. Usar solo las variables locales en la limpieza
       viewersToClean.forEach((unsub) => unsub());
       if (viewerUnsub) viewerUnsub();
       if (currentPc) currentPc.close();

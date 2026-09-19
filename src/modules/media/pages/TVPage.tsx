@@ -25,11 +25,13 @@ export const TVPage = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const unsubscribeIceRef = useRef<Unsubscribe | null>(null);
-  const unsubscribeViewerRef = useRef<Unsubscribe | null>(null);
+  const unsubscribeMainRef = useRef<Unsubscribe | null>(null);
   const unsubscribeSettingsRef = useRef<Unsubscribe | null>(null);
 
   const cleanupWebRTC = () => {
-    if (videoRef.current) videoRef.current.srcObject = null;
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
     if (pcRef.current) { 
       pcRef.current.close(); 
       pcRef.current = null; 
@@ -101,68 +103,64 @@ export const TVPage = () => {
     const mainDocRef = doc(db, 'live_streams', 'main');
     const viewerDocRef = doc(db, 'live_streams', 'viewers', viewerId);
 
-    const unsubMain = onSnapshot(mainDocRef, async (snapshot) => {
-      const data = snapshot.data();
-      
-      if (!snapshot.exists() || !data?.active) {
-        cleanupWebRTC();
-        return;
-      }
+    unsubscribeMainRef.current = onSnapshot(mainDocRef, async (snapshot) => {
+      try {
+        const data = snapshot.data();
+        
+        if (!snapshot.exists() || !data?.active) {
+          cleanupWebRTC();
+          return;
+        }
 
-      // ✅ Solo actuar si es una oferta y no tenemos conexión activa
-      if (data.type === 'offer' && !pcRef.current) {
-        const pc = new RTCPeerConnection(rtcConfig);
-        pcRef.current = pc;
+        if (data.type === 'offer' && !pcRef.current) {
+          const pc = new RTCPeerConnection(rtcConfig);
+          pcRef.current = pc;
 
-        pc.ontrack = (event) => {
-          if (videoRef.current && event.streams[0] && videoRef.current.srcObject !== event.streams[0]) {
-            videoRef.current.srcObject = event.streams[0];
-            videoRef.current.muted = true; // Requerido para autoplay
-            videoRef.current.play().catch((e) => console.error('Error play:', e));
-          }
-        };
-
-        pc.onicecandidate = async (event) => {
-          if (event.candidate) {
-            await addDoc(collection(db, 'live_streams', 'viewers', viewerId, 'ice_viewer'), {
-              candidate: event.candidate.toJSON(),
-              timestamp: serverTimestamp()
-            });
-          }
-        };
-
-        unsubscribeIceRef.current = onSnapshot(collection(db, 'live_streams', 'viewers', viewerId, 'ice_admin'), (snap) => {
-          snap.docChanges().forEach((change) => {
-            if (change.type === 'added' && pc.signalingState !== 'closed') {
-              pc.addIceCandidate(new RTCIceCandidate(change.doc.data().candidate)).catch(console.error);
+          pc.ontrack = (event) => {
+            if (videoRef.current && event.streams[0] && videoRef.current.srcObject !== event.streams[0]) {
+              videoRef.current.srcObject = event.streams[0];
+              videoRef.current.muted = true;
+              videoRef.current.play().catch((e) => console.error('Error play:', e));
             }
-          });
-        });
+          };
 
-        try {
+          pc.onicecandidate = async (event) => {
+            if (event.candidate) {
+              await addDoc(collection(db, 'live_streams', 'viewers', viewerId, 'ice_viewer'), {
+                candidate: event.candidate.toJSON(),
+                timestamp: serverTimestamp()
+              });
+            }
+          };
+
+          unsubscribeIceRef.current = onSnapshot(collection(db, 'live_streams', 'viewers', viewerId, 'ice_admin'), (snap) => {
+            snap.docChanges().forEach((change) => {
+              if (change.type === 'added' && pc.signalingState !== 'closed') {
+                pc.addIceCandidate(new RTCIceCandidate(change.doc.data().candidate)).catch(console.error);
+              }
+            });
+          });
+
           await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
           
-          // ✅ Guardar la respuesta en el documento único de este espectador
           await setDoc(viewerDocRef, {
             type: 'answer',
             sdp: answer.sdp,
             joined: serverTimestamp()
           });
-        } catch (err) {
-          console.error('❌ Error handshake:', err);
-          cleanupWebRTC();
         }
+      } catch (err) {
+        console.error('❌ Error en conexión WebRTC:', err);
+        cleanupWebRTC();
       }
     });
 
-    unsubscribeViewerRef.current = unsubMain;
-
     return () => {
       cleanupWebRTC();
-      deleteDoc(viewerDocRef).catch(() => {}); // Limpieza profesional al salir
-      if (unsubMain) unsubMain();
+      if (unsubscribeMainRef.current) unsubscribeMainRef.current();
+      deleteDoc(viewerDocRef).catch(() => {});
     };
   }, [streamMode]);
 
