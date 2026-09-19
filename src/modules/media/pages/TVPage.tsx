@@ -29,17 +29,9 @@ export const TVPage = () => {
   const unsubscribeSettingsRef = useRef<Unsubscribe | null>(null);
 
   const cleanupWebRTC = () => {
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-    if (pcRef.current) { 
-      pcRef.current.close(); 
-      pcRef.current = null; 
-    }
-    if (unsubscribeIceRef.current) { 
-      unsubscribeIceRef.current(); 
-      unsubscribeIceRef.current = null; 
-    }
+    if (videoRef.current) videoRef.current.srcObject = null;
+    if (pcRef.current) { pcRef.current.close(); pcRef.current = null; }
+    if (unsubscribeIceRef.current) { unsubscribeIceRef.current(); unsubscribeIceRef.current = null; }
   };
 
   useEffect(() => {
@@ -53,9 +45,7 @@ export const TVPage = () => {
         const messages = await getChatMessages(50);
         setChatMessages(messages);
         setLoading(false);
-      } catch {
-        setLoading(false);
-      }
+      } catch { setLoading(false); }
     };
     loadChat();
     const chatInterval = setInterval(loadChat, 5000);
@@ -67,18 +57,13 @@ export const TVPage = () => {
       const data = snapshot.data();
       if (data && data.active) {
         setStreamMode(data.mode);
-        if (data.mode === 'hls' && data.src) {
-          setHlsSrc(data.src);
-        }
+        if (data.mode === 'hls' && data.src) setHlsSrc(data.src);
       } else {
         setStreamMode('offline');
         cleanupWebRTC();
       }
     });
-
-    return () => {
-      if (unsubscribeSettingsRef.current) unsubscribeSettingsRef.current();
-    };
+    return () => { if (unsubscribeSettingsRef.current) unsubscribeSettingsRef.current(); };
   }, []);
 
   useEffect(() => {
@@ -87,26 +72,24 @@ export const TVPage = () => {
       return;
     }
 
-    const viewerId = `viewer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const viewerId = `viewer_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const rtcConfig: RTCConfiguration = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
-        {
-          urls: 'turn:stream.lapoderosa.co:3478',
-          username: 'lapoderosa',
-          credential: 'LaPoderosaTurn2024!'
-        }
+        { urls: 'turn:stream.lapoderosa.co:3478', username: 'lapoderosa', credential: 'LaPoderosaTurn2024!' }
       ]
     };
 
+    // ✅ RUTAS SEGURAS POR COMAS (4 y 5 segmentos)
     const mainDocRef = doc(db, 'live_streams', 'main');
     const viewerDocRef = doc(db, 'live_streams', 'viewers', viewerId);
+    const iceAdminRef = collection(db, 'live_streams', 'viewers', viewerId, 'ice_admin');
+    const iceViewerRef = collection(db, 'live_streams', 'viewers', viewerId, 'ice_viewer');
 
     unsubscribeMainRef.current = onSnapshot(mainDocRef, async (snapshot) => {
       try {
         const data = snapshot.data();
-        
         if (!snapshot.exists() || !data?.active) {
           cleanupWebRTC();
           return;
@@ -126,14 +109,11 @@ export const TVPage = () => {
 
           pc.onicecandidate = async (event) => {
             if (event.candidate) {
-              await addDoc(collection(db, 'live_streams', 'viewers', viewerId, 'ice_viewer'), {
-                candidate: event.candidate.toJSON(),
-                timestamp: serverTimestamp()
-              });
+              await addDoc(iceViewerRef, { candidate: event.candidate.toJSON(), timestamp: serverTimestamp() });
             }
           };
 
-          unsubscribeIceRef.current = onSnapshot(collection(db, 'live_streams', 'viewers', viewerId, 'ice_admin'), (snap) => {
+          unsubscribeIceRef.current = onSnapshot(iceAdminRef, (snap) => {
             snap.docChanges().forEach((change) => {
               if (change.type === 'added' && pc.signalingState !== 'closed') {
                 pc.addIceCandidate(new RTCIceCandidate(change.doc.data().candidate)).catch(console.error);
@@ -145,11 +125,7 @@ export const TVPage = () => {
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
           
-          await setDoc(viewerDocRef, {
-            type: 'answer',
-            sdp: answer.sdp,
-            joined: serverTimestamp()
-          });
+          await setDoc(viewerDocRef, { type: 'answer', sdp: answer.sdp, joined: serverTimestamp() });
         }
       } catch (err) {
         console.error('❌ Error en conexión WebRTC:', err);
@@ -183,9 +159,7 @@ export const TVPage = () => {
       await addChatMessage(finalUserName, newMessage.trim());
       setNewMessage('');
       setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'auto' }), 100);
-    } catch (error) {
-      console.error('Error al enviar mensaje:', error);
-    }
+    } catch (error) { console.error('Error al enviar mensaje:', error); }
   };
 
   const formatTime = (timestamp: Timestamp) => {
@@ -198,7 +172,6 @@ export const TVPage = () => {
     <div className="space-y-6 py-6">
       <div className="relative rounded-2xl overflow-hidden bg-black border border-dark-border">
         <div className="relative w-full aspect-video bg-black flex items-center justify-center">
-          
           {streamMode === 'hls' ? (
             <>
               <HLSVideoPlayer src={hlsSrc} />
@@ -226,7 +199,6 @@ export const TVPage = () => {
           )}
         </div>
       </div>
-
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <div className="p-6 rounded-xl bg-dark-surface border border-dark-border space-y-4">
@@ -244,10 +216,9 @@ export const TVPage = () => {
               <div className="flex items-center gap-2"><Radio className="w-4 h-4 text-brand" /><span>Señal en vivo</span></div>
               <div className="flex items-center gap-2"><Users className="w-4 h-4 text-brand" /><span>Espectadores conectados</span></div>
             </div>
-            <p className="text-text-secondary">Disfruta de nuestra programación en vivo con la mejor calidad de video y sonido. Interactúa con nosotros a través del chat en tiempo real.</p>
+            <p className="text-text-secondary">Disfruta de nuestra programación en vivo con la mejor calidad de video y sonido.</p>
           </div>
         </div>
-
         <div className="space-y-4">
           <div className="rounded-xl bg-dark-surface border border-dark-border overflow-hidden">
             <div className="p-4 border-b border-dark-border flex items-center justify-between">

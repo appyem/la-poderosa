@@ -18,11 +18,7 @@ export const StreamingPage = () => {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
-      {
-        urls: 'turn:stream.lapoderosa.co:3478',
-        username: 'lapoderosa',
-        credential: 'LaPoderosaTurn2024!'
-      }
+      { urls: 'turn:stream.lapoderosa.co:3478', username: 'lapoderosa', credential: 'LaPoderosaTurn2024!' }
     ]
   };
 
@@ -48,6 +44,8 @@ export const StreamingPage = () => {
 
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
+      
+      // ✅ RUTA SEGURA POR COMAS
       await setDoc(doc(db, 'live_streams', 'main'), {
         type: 'offer',
         sdp: offer.sdp,
@@ -55,6 +53,7 @@ export const StreamingPage = () => {
         timestamp: serverTimestamp()
       });
 
+      // ✅ RUTA SEGURA POR COMAS
       unsubscribeViewerRef.current = onSnapshot(collection(db, 'live_streams', 'viewers'), (snapshot) => {
         snapshot.docChanges().forEach(async (change) => {
           const viewerId = change.doc.id;
@@ -64,13 +63,11 @@ export const StreamingPage = () => {
             const currentPc = pcRef.current;
             if (currentPc && currentPc.signalingState === 'have-local-offer') {
               try {
-                await currentPc.setRemoteDescription(new RTCSessionDescription({
-                  type: 'answer',
-                  sdp: data.sdp
-                }));
+                await currentPc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: data.sdp }));
                 setStatus('🔴 TRANSMITIENDO (Captura de Pantalla)');
                 setIsStreaming(true);
 
+                // ✅ RUTA SEGURA POR COMAS (5 segmentos)
                 const unsubIce = onSnapshot(collection(db, 'live_streams', 'viewers', viewerId, 'ice_viewer'), (iceSnap) => {
                   iceSnap.docChanges().forEach((iceChange) => {
                     if (iceChange.type === 'added' && currentPc.signalingState !== 'closed') {
@@ -97,6 +94,7 @@ export const StreamingPage = () => {
         if (event.candidate) {
           const candidateData = { candidate: event.candidate.toJSON(), timestamp: serverTimestamp() };
           const promises = Array.from(activeViewers.current.keys()).map(async (vId) => {
+            // ✅ RUTA SEGURA POR COMAS (5 segmentos)
             await addDoc(collection(db, 'live_streams', 'viewers', vId, 'ice_admin'), candidateData);
           });
           await Promise.all(promises);
@@ -111,11 +109,7 @@ export const StreamingPage = () => {
 
   const activateHLS = async () => {
     try {
-      await setDoc(doc(db, 'live_streams', 'settings'), { 
-        mode: 'hls', 
-        active: true,
-        src: 'https://stream.lapoderosa.co/live/lapoderosa.m3u8'
-      });
+      await setDoc(doc(db, 'live_streams', 'settings'), { mode: 'hls', active: true, src: 'https://stream.lapoderosa.co/live/lapoderosa.m3u8' });
       setStatus('🔴 TRANSMITIENDO (Fuente Externa YoloBox/OBS)');
       setIsStreaming(true);
     } catch (error) {
@@ -142,11 +136,10 @@ export const StreamingPage = () => {
     await deleteDoc(doc(db, 'live_streams', 'main'));
     
     try {
+      // ✅ RUTA SEGURA POR COMAS
       const viewersSnap = await getDocs(collection(db, 'live_streams', 'viewers'));
       const batch = writeBatch(db);
-      viewersSnap.docs.forEach((d) => {
-        batch.delete(d.ref);
-      });
+      viewersSnap.docs.forEach((d) => batch.delete(d.ref));
       await batch.commit();
     } catch (e) {
       console.error('Error limpiando viewers:', e);
@@ -175,32 +168,22 @@ export const StreamingPage = () => {
         <h1 className="text-2xl font-bold text-white">Control de Streaming</h1>
         <p className="text-sm text-text-secondary mt-1">Gestione la transmisión en vivo de la plataforma</p>
       </div>
-
       <div className="max-w-2xl">
         <div className="p-6 rounded-xl bg-dark-surface border border-dark-border">
           <div className="flex gap-2 mb-6 p-1 bg-dark-bg rounded-lg">
-            <button 
-              onClick={() => !isStreaming && setStreamMode('webrtc')}
-              className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${streamMode === 'webrtc' ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}
-              disabled={isStreaming}
-            >
+            <button onClick={() => !isStreaming && setStreamMode('webrtc')} className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${streamMode === 'webrtc' ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`} disabled={isStreaming}>
               <Monitor className="w-4 h-4" /> Captura de Pantalla
             </button>
-            <button 
-              onClick={() => !isStreaming && setStreamMode('hls')}
-              className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${streamMode === 'hls' ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`}
-              disabled={isStreaming}
-            >
-              <Globe className="w-4 h-4" /> YoloBox / OBS (Servidor Propio)
+            <button onClick={() => !isStreaming && setStreamMode('hls')} className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${streamMode === 'hls' ? 'bg-brand text-white' : 'text-text-secondary hover:text-white'}`} disabled={isStreaming}>
+              <Globe className="w-4 h-4" /> YoloBox / OBS
             </button>
           </div>
-
           {streamMode === 'webrtc' ? (
             <>
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-6">
                 <p className="text-sm text-blue-400 flex items-start gap-2">
                   <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                  <span>Transmite directamente desde este navegador. ⚠️ Marque <strong>"Compartir audio de la pestaña"</strong> y seleccione la pantalla completa.</span>
+                  <span>Marque <strong>"Compartir audio de la pestaña"</strong> y seleccione la pantalla completa.</span>
                 </p>
               </div>
               <div className="flex items-center gap-3 mb-6 p-4 rounded-lg bg-dark-bg border border-dark-border">
@@ -224,11 +207,7 @@ export const StreamingPage = () => {
               <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-6">
                 <p className="text-sm text-green-400 flex items-start gap-2">
                   <Globe className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                  <span>
-                    Configure su YoloBox u OBS con estos datos y luego active la señal:<br/>
-                    <strong>URL:</strong> rtmp://104.156.247.202/live<br/>
-                    <strong>Clave:</strong> lapoderosa
-                  </span>
+                  <span>URL: rtmp://104.156.247.202/live <br/> Clave: lapoderosa</span>
                 </p>
               </div>
               <div className="flex items-center gap-3 mb-6 p-4 rounded-lg bg-dark-bg border border-dark-border">
