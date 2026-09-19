@@ -6,6 +6,7 @@ import { Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config'; 
 import { doc, onSnapshot, collection, addDoc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import type { Unsubscribe } from 'firebase/firestore';
+import { HLSVideoPlayer } from '../../../components/HLSVideoPlayer'; // ✅ Ruta corregida
 
 export const TVPage = () => {
   const [currentTime, setCurrentTime] = useState(() => Date.now());
@@ -15,16 +16,34 @@ export const TVPage = () => {
   const [nameConfirmed, setNameConfirmed] = useState(false);
   const [showChat, setShowChat] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [isLive, setIsLive] = useState(false);
-  const [viewerId] = useState(() => `viewer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   
+  const [streamMode, setStreamMode] = useState<'webrtc' | 'hls' | 'offline'>('offline');
+  const [hlsSrc, setHlsSrc] = useState('');
+
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const unsubscribeIceRef = useRef<Unsubscribe | null>(null);
   const unsubscribeViewerRef = useRef<Unsubscribe | null>(null);
-  const unsubscribeOfferRef = useRef<Unsubscribe | null>(null);
+  const unsubscribeSettingsRef = useRef<Unsubscribe | null>(null);
+
+  // ✅ MOVIDO ARRIBA para evitar el error de "accedido antes de ser declarado"
+  const cleanupWebRTC = () => {
+    if (videoRef.current) videoRef.current.srcObject = null;
+    if (pcRef.current) { 
+      pcRef.current.close(); 
+      pcRef.current = null; 
+    }
+    if (unsubscribeIceRef.current) { 
+      unsubscribeIceRef.current(); 
+      unsubscribeIceRef.current = null; 
+    }
+    if (unsubscribeViewerRef.current) { 
+      unsubscribeViewerRef.current(); 
+      unsubscribeViewerRef.current = null; 
+    }
+  };
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(Date.now()), 60000);
@@ -46,161 +65,102 @@ export const TVPage = () => {
     return () => clearInterval(chatInterval);
   }, []);
 
-  // ✅ Nueva lógica: Suscribirse como espectador cuando hay transmisión activa
+  // ✅ 1. Escuchar la configuración del administrador
   useEffect(() => {
-        const rtcConfig: RTCConfiguration = {
+    unsubscribeSettingsRef.current = onSnapshot(doc(db, 'live_streams', 'settings'), (snapshot) => {
+      const data = snapshot.data();
+      if (data && data.active) {
+        setStreamMode(data.mode);
+        if (data.mode === 'hls' && data.src) {
+          setHlsSrc(data.src);
+        }
+      } else {
+        setStreamMode('offline');
+        cleanupWebRTC(); // ✅ Ahora sí puede llamarse porque ya fue declarada arriba
+      }
+    });
+
+    return () => {
+      if (unsubscribeSettingsRef.current) unsubscribeSettingsRef.current();
+    };
+  }, []);
+
+  // ✅ 2. Lógica WebRTC (Solo si el modo es 'webrtc')
+  useEffect(() => {
+    if (streamMode !== 'webrtc') return;
+
+    const viewerId = `viewer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const rtcConfig: RTCConfiguration = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' }
-      ],
-      bundlePolicy: 'max-bundle',
-      rtcpMuxPolicy: 'require'
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ]
     };
 
     const subscribeAsViewer = async () => {
-      console.log(`📺 TVPage [${viewerId}]: Registrándose como espectador...`);
-      
-      // Crear nuestra sesión en Firestore
       const viewerDocRef = doc(db, 'live_streams', 'sessions', 'viewers', viewerId);
-      await setDoc(viewerDocRef, {
-        joined: serverTimestamp(),
-        userAgent: navigator.userAgent
-      });
+      await setDoc(viewerDocRef, { joined: serverTimestamp(), userAgent: navigator.userAgent });
 
-      // Escuchar nuestra sesión para recibir la oferta del admin
       unsubscribeViewerRef.current = onSnapshot(viewerDocRef, async (snapshot) => {
         const data = snapshot.data();
-        
         if (data?.offer && !pcRef.current) {
-          console.log(`📺 TVPage [${viewerId}]: Oferta recibida del admin`);
           await connectToStream(data.offer, rtcConfig);
         }
       });
 
-      // Detectar si la transmisión se detiene
-      unsubscribeOfferRef.current = onSnapshot(
-        doc(db, 'live_streams', 'active_offer'),
-        (snapshot) => {
-          if (!snapshot.exists()) {
-            console.log(`📺 TVPage [${viewerId}]: Transmisión finalizada`);
-            cleanup();
-          }
+      getDoc(doc(db, 'live_streams', 'main')).then((snap) => {
+        if (snap.exists() && snap.data()?.type === 'offer') {
+           subscribeAsViewer(); 
         }
-      );
+      });
     };
 
-    const connectToStream = async (offer: { sdp: string; type: string }, rtcConfig: RTCConfiguration) => {
-      setIsLive(true);
-      
-      const pc = new RTCPeerConnection(rtcConfig);
+    const connectToStream = async (offer: { sdp: string; type: string }, config: RTCConfiguration) => {
+      const pc = new RTCPeerConnection(config);
       pcRef.current = pc;
 
       pc.ontrack = (event) => {
-        console.log(`📺 TVPage [${viewerId}]: ¡Pista de video recibida!`);
         if (videoRef.current && event.streams[0]) {
-          videoRef.current.srcObject = event.streams[0];
-          videoRef.current.play().catch(() => {});
+          if (videoRef.current.srcObject !== event.streams[0]) {
+            videoRef.current.srcObject = event.streams[0];
+            videoRef.current.play().catch(() => {});
+          }
         }
       };
 
       pc.onicecandidate = async (event) => {
         if (event.candidate) {
-          await addDoc(
-            collection(db, 'live_streams', 'sessions', 'viewers', viewerId, 'ice_candidates_viewer'),
-            {
-              candidate: event.candidate.toJSON(),
-              timestamp: serverTimestamp()
-            }
-          );
+          await addDoc(collection(db, 'live_streams', 'sessions', 'viewers', viewerId, 'ice_candidates_viewer'), {
+            candidate: event.candidate.toJSON(), timestamp: serverTimestamp()
+          });
         }
       };
 
-      // Escuchar ICE candidates del admin
-      unsubscribeIceRef.current = onSnapshot(
-        collection(db, 'live_streams', 'sessions', 'viewers', viewerId, 'ice_candidates_admin'),
-        (snap) => {
-          snap.docChanges().forEach((change) => {
-            if (change.type === 'added' && pc.signalingState !== 'closed') {
-              const candData = change.doc.data();
-              pc.addIceCandidate(new RTCIceCandidate(candData.candidate)).catch(console.error);
-            }
-          });
-        }
-      );
+      unsubscribeIceRef.current = onSnapshot(collection(db, 'live_streams', 'sessions', 'viewers', viewerId, 'ice_candidates_admin'), (snap) => {
+        snap.docChanges().forEach((change) => {
+          if (change.type === 'added' && pc.signalingState !== 'closed') {
+            pc.addIceCandidate(new RTCIceCandidate(change.doc.data().candidate)).catch(console.error);
+          }
+        });
+      });
 
       try {
-        await pc.setRemoteDescription(new RTCSessionDescription({ 
-          type: 'offer', 
-          sdp: offer.sdp 
-        }));
-        
+        await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: offer.sdp }));
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-
-        // Enviar respuesta al admin
-        await setDoc(viewerDocRef, {
-          answer: {
-            sdp: answer.sdp,
-            type: 'answer'
-          }
-        }, { merge: true });
-
-        console.log(`📺 TVPage [${viewerId}]: Handshake completado`);
+        await setDoc(doc(db, 'live_streams', 'sessions', 'viewers', viewerId), { answer: { sdp: answer.sdp, type: 'answer' } }, { merge: true });
       } catch (err) {
-        console.error('❌ Error en el handshake:', err);
+        console.error('❌ Error en handshake WebRTC:', err);
       }
     };
 
-    const viewerDocRef = doc(db, 'live_streams', 'sessions', 'viewers', viewerId);
-
-    const cleanup = () => {
-      setIsLive(false);
-      if (videoRef.current) videoRef.current.srcObject = null;
-      if (pcRef.current) {
-        pcRef.current.close();
-        pcRef.current = null;
-      }
-      if (unsubscribeIceRef.current) {
-        unsubscribeIceRef.current();
-        unsubscribeIceRef.current = null;
-      }
-      if (unsubscribeViewerRef.current) {
-        unsubscribeViewerRef.current();
-        unsubscribeViewerRef.current = null;
-      }
-      if (unsubscribeOfferRef.current) {
-        unsubscribeOfferRef.current();
-        unsubscribeOfferRef.current = null;
-      }
-    };
-
-    // Verificar si hay transmisión activa antes de suscribirse
-    getDoc(doc(db, 'live_streams', 'active_offer')).then((snap) => {
-      if (snap.exists()) {
-        subscribeAsViewer();
-      } else {
-        // Escuchar si se activa una transmisión
-        unsubscribeOfferRef.current = onSnapshot(
-          doc(db, 'live_streams', 'active_offer'),
-          (snapshot) => {
-            if (snapshot.exists()) {
-              subscribeAsViewer();
-            }
-          }
-        );
-      }
-    });
+    subscribeAsViewer();
 
     return () => {
-      console.log(`📺 TVPage [${viewerId}]: Limpiando...`);
-      cleanup();
-      // Borrar nuestra sesión al salir
-      deleteDoc(viewerDocRef).catch(() => {});
+      cleanupWebRTC();
+      deleteDoc(doc(db, 'live_streams', 'sessions', 'viewers', viewerId)).catch(() => {});
     };
-  }, [viewerId]);
+  }, [streamMode]);
 
   useEffect(() => {
     const container = chatContainerRef.current;
@@ -214,18 +174,15 @@ export const TVPage = () => {
   const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
-    
     const finalUserName = userName.trim() || 'Espectador';
     if (!userName.trim()) setUserName(finalUserName);
     setNameConfirmed(true);
-    
     try {
       await addChatMessage(finalUserName, newMessage.trim());
       setNewMessage('');
       setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'auto' }), 100);
     } catch (error) {
       console.error('Error al enviar mensaje:', error);
-      alert('No se pudo enviar el mensaje. Verifique su conexión.');
     }
   };
 
@@ -239,7 +196,17 @@ export const TVPage = () => {
     <div className="space-y-6 py-6">
       <div className="relative rounded-2xl overflow-hidden bg-black border border-dark-border">
         <div className="relative w-full aspect-video bg-black flex items-center justify-center">
-          {isLive ? (
+          
+          {streamMode === 'hls' ? (
+            <>
+              <HLSVideoPlayer src={hlsSrc} />
+              <div className="absolute top-4 left-4 flex items-center gap-3 pointer-events-auto z-10">
+                <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-600 text-white text-xs font-bold uppercase shadow-lg">
+                  <span className="w-2 h-2 bg-white rounded-full animate-pulse" /> EN VIVO
+                </span>
+              </div>
+            </>
+          ) : streamMode === 'webrtc' ? (
             <>
               <video ref={videoRef} autoPlay playsInline controls className="w-full h-full object-contain bg-black" />
               <div className="absolute top-4 left-4 flex items-center gap-3 pointer-events-auto z-10">

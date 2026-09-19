@@ -1,48 +1,78 @@
 import { useEffect, useRef } from 'react';
-import videojs from 'video.js';
-import 'video.js/dist/video-js.css';
+import Hls from 'hls.js';
 
 interface HLSVideoPlayerProps {
   src: string;
 }
 
 export const HLSVideoPlayer = ({ src }: HLSVideoPlayerProps) => {
-  const videoRef = useRef<HTMLDivElement>(null);
-  
-  // ✅ CORRECCIÓN: Usar ReturnType para obtener el tipo exacto del jugador de video.js
-  const playerRef = useRef<ReturnType<typeof videojs> | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
 
   useEffect(() => {
-    if (!playerRef.current && videoRef.current) {
-      const videoElement = document.createElement('video-js');
-      videoElement.classList.add('vjs-big-play-centered', 'vjs-theme-city');
-      videoRef.current.appendChild(videoElement);
+    if (!src || !videoRef.current) return;
 
-      // Asignar directamente a playerRef.current
-      playerRef.current = videojs(videoElement, {
-        autoplay: true,
-        muted: true, // Necesario para autoplay en navegadores modernos
-        controls: true,
-        responsive: true,
-        fluid: true,
-        sources: [{
-          src: src,
-          type: 'application/x-mpegURL' // Tipo MIME para HLS (.m3u8)
-        }]
+    const video = videoRef.current;
+
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = src;
+      video.addEventListener('loadedmetadata', () => {
+        video.play().catch(() => {});
+      });
+    } else if (Hls.isSupported()) {
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+        backBufferLength: 90
+      });
+      
+      hlsRef.current = hls;
+      hls.loadSource(src);
+      hls.attachMedia(video);
+      
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.play().catch(() => {});
+      });
+
+      // El guion bajo en _event evita la advertencia de TypeScript
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              hls.recoverMediaError();
+              break;
+            default:
+              hls.destroy();
+              break;
+          }
+        }
       });
     }
 
     return () => {
-      if (playerRef.current) {
-        playerRef.current.dispose();
-        playerRef.current = null;
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
       }
     };
   }, [src]);
 
   return (
-    <div data-vjs-player>
-      <div ref={videoRef} className="w-full h-full" />
-    </div>
+    <video
+      ref={videoRef}
+      autoPlay
+      muted
+      playsInline
+      controls
+      className="w-full h-full object-contain bg-black"
+    />
   );
 };
