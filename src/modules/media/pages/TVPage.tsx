@@ -53,6 +53,7 @@ export const TVPage = () => {
   }, []);
 
   useEffect(() => {
+    // 2 segmentos (Documento válido)
     unsubscribeSettingsRef.current = onSnapshot(doc(db, 'live_streams', 'settings'), (snapshot) => {
       const data = snapshot.data();
       if (data && data.active) {
@@ -81,11 +82,13 @@ export const TVPage = () => {
       ]
     };
 
-    // ✅ RUTAS SEGURAS POR COMAS (4 y 5 segmentos)
+    // 2 segmentos (Documento válido)
     const mainDocRef = doc(db, 'live_streams', 'main');
-    const viewerDocRef = doc(db, 'live_streams', 'viewers', viewerId);
-    const iceAdminRef = collection(db, 'live_streams', 'viewers', viewerId, 'ice_admin');
-    const iceViewerRef = collection(db, 'live_streams', 'viewers', viewerId, 'ice_viewer');
+    const viewerDocRef = doc(db, 'viewers', viewerId);
+    
+    // 3 segmentos (Colección válida)
+    const iceAdminRef = collection(db, 'viewers', viewerId, 'ice_admin');
+    const iceViewerRef = collection(db, 'viewers', viewerId, 'ice_viewer');
 
     unsubscribeMainRef.current = onSnapshot(mainDocRef, async (snapshot) => {
       try {

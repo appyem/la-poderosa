@@ -24,6 +24,7 @@ export const StreamingPage = () => {
 
   const startWebRTC = async () => {
     try {
+      // 2 segmentos (Documento válido)
       await setDoc(doc(db, 'live_streams', 'settings'), { mode: 'webrtc', active: true });
       setStatus('Solicitando permiso de captura...');
       
@@ -45,7 +46,7 @@ export const StreamingPage = () => {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       
-      // ✅ RUTA SEGURA POR COMAS
+      // 2 segmentos (Documento válido)
       await setDoc(doc(db, 'live_streams', 'main'), {
         type: 'offer',
         sdp: offer.sdp,
@@ -53,8 +54,8 @@ export const StreamingPage = () => {
         timestamp: serverTimestamp()
       });
 
-      // ✅ RUTA SEGURA POR COMAS
-      unsubscribeViewerRef.current = onSnapshot(collection(db, 'live_streams', 'viewers'), (snapshot) => {
+      // 1 segmento (Colección válida)
+      unsubscribeViewerRef.current = onSnapshot(collection(db, 'viewers'), (snapshot) => {
         snapshot.docChanges().forEach(async (change) => {
           const viewerId = change.doc.id;
           const data = change.doc.data();
@@ -67,8 +68,8 @@ export const StreamingPage = () => {
                 setStatus('🔴 TRANSMITIENDO (Captura de Pantalla)');
                 setIsStreaming(true);
 
-                // ✅ RUTA SEGURA POR COMAS (5 segmentos)
-                const unsubIce = onSnapshot(collection(db, 'live_streams', 'viewers', viewerId, 'ice_viewer'), (iceSnap) => {
+                // 3 segmentos (Colección válida)
+                const unsubIce = onSnapshot(collection(db, 'viewers', viewerId, 'ice_viewer'), (iceSnap) => {
                   iceSnap.docChanges().forEach((iceChange) => {
                     if (iceChange.type === 'added' && currentPc.signalingState !== 'closed') {
                       currentPc.addIceCandidate(new RTCIceCandidate(iceChange.doc.data().candidate)).catch(console.error);
@@ -94,8 +95,8 @@ export const StreamingPage = () => {
         if (event.candidate) {
           const candidateData = { candidate: event.candidate.toJSON(), timestamp: serverTimestamp() };
           const promises = Array.from(activeViewers.current.keys()).map(async (vId) => {
-            // ✅ RUTA SEGURA POR COMAS (5 segmentos)
-            await addDoc(collection(db, 'live_streams', 'viewers', vId, 'ice_admin'), candidateData);
+            // 3 segmentos (Colección válida)
+            await addDoc(collection(db, 'viewers', vId, 'ice_admin'), candidateData);
           });
           await Promise.all(promises);
         }
@@ -133,11 +134,12 @@ export const StreamingPage = () => {
       pcRef.current = null;
     }
     
+    // 2 segmentos (Documento válido)
     await deleteDoc(doc(db, 'live_streams', 'main'));
     
     try {
-      // ✅ RUTA SEGURA POR COMAS
-      const viewersSnap = await getDocs(collection(db, 'live_streams', 'viewers'));
+      // 1 segmento (Colección válida)
+      const viewersSnap = await getDocs(collection(db, 'viewers'));
       const batch = writeBatch(db);
       viewersSnap.docs.forEach((d) => batch.delete(d.ref));
       await batch.commit();
