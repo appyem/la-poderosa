@@ -4,7 +4,7 @@ import { MessageCircle, Heart, Share2, Users, Radio, Send, Loader2, AlertCircle 
 import { getChatMessages, addChatMessage, type ChatMessage } from '../../../core/firebase/services';
 import { Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../core/firebase/config'; 
-import { doc, onSnapshot, collection, addDoc, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection, addDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import type { Unsubscribe } from 'firebase/firestore';
 import { HLSVideoPlayer } from '../../../components/HLSVideoPlayer';
 
@@ -19,9 +19,6 @@ export const TVPage = () => {
   
   const [streamMode, setStreamMode] = useState<'webrtc' | 'hls' | 'offline'>('offline');
   const [hlsSrc, setHlsSrc] = useState('');
-  
-  const [connectionStatus, setConnectionStatus] = useState<'waiting' | 'connecting' | 'connected' | 'failed'>('waiting');
-  const [hasVideo, setHasVideo] = useState(false);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -40,10 +37,6 @@ export const TVPage = () => {
     if (unsubscribeIceRef.current) { 
       unsubscribeIceRef.current(); 
       unsubscribeIceRef.current = null; 
-    }
-    if (unsubscribeViewerRef.current) { 
-      unsubscribeViewerRef.current(); 
-      unsubscribeViewerRef.current = null; 
     }
   };
 
@@ -92,6 +85,7 @@ export const TVPage = () => {
       return;
     }
 
+    const viewerId = `viewer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const rtcConfig: RTCConfiguration = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -105,98 +99,70 @@ export const TVPage = () => {
     };
 
     const mainDocRef = doc(db, 'live_streams', 'main');
-    let isFirstSnapshot = true;
-    
-    console.log("📺 TV: Iniciando escucha de live_streams/main...");
-    
-    // ✅ CORRECCIÓN: Se agregó 'async' aquí para permitir los 'await' internos
-    unsubscribeViewerRef.current = onSnapshot(
-      mainDocRef, 
-      async (snapshot) => {
-        if (snapshot.metadata.hasPendingWrites) {
-          console.log("📺 TV: Esperando confirmación de escritura...");
-        }
-        
-        if (!snapshot.exists()) {
-          console.log("⚠️ TV: El documento live_streams/main NO EXISTE aún.");
-          if (isFirstSnapshot) {
-            setConnectionStatus('waiting');
-            setHasVideo(false);
-            isFirstSnapshot = false;
-          }
-          return;
-        }
+    const viewerDocRef = doc(db, 'live_streams', 'viewers', viewerId);
 
-        const data = snapshot.data();
-        console.log("✅ TV: Snapshot recibido con datos:", data);
-
-        if (isFirstSnapshot) {
-          setConnectionStatus('waiting');
-          setHasVideo(false);
-          isFirstSnapshot = false;
-        }
-
-        if (data && data.type === 'offer' && !pcRef.current) {
-          console.log("🎬 TV: ¡OFERTA DETECTADA! Iniciando conexión...");
-          setConnectionStatus('connecting');
-          const pc = new RTCPeerConnection(rtcConfig);
-          pcRef.current = pc;
-
-                    pc.ontrack = (event) => {
-            if (videoRef.current && event.streams[0]) {
-              videoRef.current.srcObject = event.streams[0];
-              videoRef.current.muted = true; // ✅ Silenciar para permitir autoplay
-              videoRef.current.play()
-                .then(() => {
-                  console.log('✅ Video reproduciéndose correctamente');
-                  setHasVideo(true);
-                  setConnectionStatus('connected');
-                })
-                .catch((e) => console.error('Error play:', e));
-            }
-          };
-
-          pc.onicecandidate = async (event) => {
-            if (event.candidate) {
-              await addDoc(collection(db, 'live_streams', 'main', 'ice_candidates_viewer'), {
-                candidate: event.candidate.toJSON(),
-                timestamp: serverTimestamp()
-              });
-            }
-          };
-
-          unsubscribeIceRef.current = onSnapshot(collection(db, 'live_streams', 'main', 'ice_candidates_admin'), (snap) => {
-            snap.docChanges().forEach((change) => {
-              if (change.type === 'added' && pc.signalingState !== 'closed') {
-                pc.addIceCandidate(new RTCIceCandidate(change.doc.data().candidate)).catch(console.error);
-              }
-            });
-          });
-
-          try {
-            await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            await setDoc(mainDocRef, { type: 'answer', sdp: answer.sdp }, { merge: true });
-          } catch (err) {
-            console.error('❌ Error handshake:', err);
-            setConnectionStatus('failed');
-          }
-        }
-        
-        if (!data || !data.active) {
-          cleanupWebRTC();
-          setConnectionStatus('waiting');
-          setHasVideo(false);
-        }
-      },
-      (error) => {
-        console.error("❌ TV: ERROR DE FIRESTORE AL LEER:", error);
+    const unsubMain = onSnapshot(mainDocRef, async (snapshot) => {
+      const data = snapshot.data();
+      
+      if (!snapshot.exists() || !data?.active) {
+        cleanupWebRTC();
+        return;
       }
-    );
+
+      // ✅ Solo actuar si es una oferta y no tenemos conexión activa
+      if (data.type === 'offer' && !pcRef.current) {
+        const pc = new RTCPeerConnection(rtcConfig);
+        pcRef.current = pc;
+
+        pc.ontrack = (event) => {
+          if (videoRef.current && event.streams[0] && videoRef.current.srcObject !== event.streams[0]) {
+            videoRef.current.srcObject = event.streams[0];
+            videoRef.current.muted = true; // Requerido para autoplay
+            videoRef.current.play().catch((e) => console.error('Error play:', e));
+          }
+        };
+
+        pc.onicecandidate = async (event) => {
+          if (event.candidate) {
+            await addDoc(collection(db, 'live_streams', 'viewers', viewerId, 'ice_viewer'), {
+              candidate: event.candidate.toJSON(),
+              timestamp: serverTimestamp()
+            });
+          }
+        };
+
+        unsubscribeIceRef.current = onSnapshot(collection(db, 'live_streams', 'viewers', viewerId, 'ice_admin'), (snap) => {
+          snap.docChanges().forEach((change) => {
+            if (change.type === 'added' && pc.signalingState !== 'closed') {
+              pc.addIceCandidate(new RTCIceCandidate(change.doc.data().candidate)).catch(console.error);
+            }
+          });
+        });
+
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          
+          // ✅ Guardar la respuesta en el documento único de este espectador
+          await setDoc(viewerDocRef, {
+            type: 'answer',
+            sdp: answer.sdp,
+            joined: serverTimestamp()
+          });
+        } catch (err) {
+          console.error('❌ Error handshake:', err);
+          cleanupWebRTC();
+        }
+      }
+    });
+
+    unsubscribeViewerRef.current = unsubMain;
 
     return () => {
       cleanupWebRTC();
+      deleteDoc(viewerDocRef).catch(() => {}); // Limpieza profesional al salir
+      if (unsubMain) unsubMain();
     };
   }, [streamMode]);
 
@@ -235,15 +201,6 @@ export const TVPage = () => {
       <div className="relative rounded-2xl overflow-hidden bg-black border border-dark-border">
         <div className="relative w-full aspect-video bg-black flex items-center justify-center">
           
-          {streamMode === 'webrtc' && (
-            <div className="absolute top-20 left-4 bg-black/90 text-green-400 p-4 rounded text-sm font-mono z-50 border-2 border-green-500 shadow-xl">
-              <p className="font-bold mb-2 text-white">🔍 DIAGNÓSTICO EN VIVO:</p>
-              <p>1. Modo: {streamMode}</p>
-              <p>2. Conexión: {connectionStatus.toUpperCase()}</p>
-              <p>3. Video: {hasVideo ? 'RECIBIDO ✅' : 'SIN SEÑAL ❌'}</p>
-            </div>
-          )}
-
           {streamMode === 'hls' ? (
             <>
               <HLSVideoPlayer src={hlsSrc} />

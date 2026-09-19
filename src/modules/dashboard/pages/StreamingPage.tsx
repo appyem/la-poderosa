@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Tv, AlertCircle, Monitor, X, Globe } from 'lucide-react';
 import { db } from '../../../core/firebase/config'; 
-import { doc, setDoc, deleteDoc, onSnapshot, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, onSnapshot, collection, addDoc, serverTimestamp, getDocs, writeBatch } from 'firebase/firestore';
 import type { Unsubscribe } from 'firebase/firestore';
 
 export const StreamingPage = () => {
@@ -11,8 +11,8 @@ export const StreamingPage = () => {
   
   const streamRef = useRef<MediaStream | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
-  const unsubscribeAnswerRef = useRef<Unsubscribe | null>(null);
-  const unsubscribeIceRef = useRef<Unsubscribe | null>(null);
+  const unsubscribeViewerRef = useRef<Unsubscribe | null>(null);
+  const activeViewers = useRef<Map<string, Unsubscribe>>(new Map());
 
   const rtcConfig: RTCConfiguration = {
     iceServers: [
@@ -28,16 +28,14 @@ export const StreamingPage = () => {
 
   const startWebRTC = async () => {
     try {
-      console.log("🔍 PASO 1: Actualizando Firebase settings a webrtc...");
       await setDoc(doc(db, 'live_streams', 'settings'), { mode: 'webrtc', active: true });
       setStatus('Solicitando permiso de captura...');
       
-      console.log("🔍 PASO 2: Solicitando permiso de pantalla al navegador...");
+      // ✅ SOLUCIÓN RESOLUCIÓN: Solicitar explícitamente Full HD
       const stream = await navigator.mediaDevices.getDisplayMedia({ 
-        video: { frameRate: { ideal: 30, max: 30 } }, 
+        video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30, max: 30 } }, 
         audio: true 
       });
-      console.log("✅ PASO 2 COMPLETADO: Permiso de pantalla obtenido.");
 
       streamRef.current = stream;
       const videoTrack = stream.getVideoTracks()[0];
@@ -45,57 +43,72 @@ export const StreamingPage = () => {
       videoTrack.onended = () => stopStream();
 
       setStatus('Conectando señal en vivo...');
-      console.log("🔍 PASO 3: Creando RTCPeerConnection...");
       const pc = new RTCPeerConnection(rtcConfig);
       pcRef.current = pc;
-
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-      pc.onicecandidate = async (event) => {
-        if (event.candidate) {
-          console.log("🔍 PASO 4: Enviando ICE candidate a Firebase...");
-          await addDoc(collection(db, 'live_streams', 'main', 'ice_candidates_admin'), {
-            candidate: event.candidate.toJSON(),
-            timestamp: serverTimestamp()
-          });
-        }
-      };
-
-      console.log("🔍 PASO 5: Configurando listener para ICE candidates del viewer...");
-      unsubscribeIceRef.current = onSnapshot(collection(db, 'live_streams', 'main', 'ice_candidates_viewer'), (snapshot) => {
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === 'added' && pcRef.current && pcRef.current.signalingState !== 'closed') {
-            const data = change.doc.data();
-            pcRef.current.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(console.error);
-          }
-        });
-      });
-
-      console.log("🔍 PASO 6: Creando oferta SDP...");
+      // 1. Publicar la OFERTA MAESTRA (Persistente, nunca se sobrescribe)
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-
-      console.log("🔍 PASO 7: Guardando oferta en Firebase (live_streams/main)...");
       await setDoc(doc(db, 'live_streams', 'main'), {
         type: 'offer',
         sdp: offer.sdp,
         active: true,
         timestamp: serverTimestamp()
       });
-      console.log("✅ PASO 7 COMPLETADO: Oferta guardada en Firebase. Esperando respuesta del viewer...");
 
-      unsubscribeAnswerRef.current = onSnapshot(doc(db, 'live_streams', 'main'), async (snapshot) => {
-        const data = snapshot.data();
-        if (data && data.type === 'answer' && pcRef.current && pcRef.current.signalingState === 'have-local-offer') {
-          console.log("✅ PASO 8: Respuesta del viewer recibida. Estableciendo conexión...");
-          await pcRef.current.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: data.sdp }));
-          setStatus('🔴 TRANSMITIENDO (Captura de Pantalla)');
-          setIsStreaming(true);
-        }
+      // 2. Escuchar nuevos espectadores que envían su respuesta
+      unsubscribeViewerRef.current = onSnapshot(collection(db, 'live_streams', 'viewers'), (snapshot) => {
+        snapshot.docChanges().forEach(async (change) => {
+          const viewerId = change.doc.id;
+          const data = change.doc.data();
+
+                    if ((change.type === 'added' || change.type === 'modified') && data?.type === 'answer') {
+            const pc = pcRef.current;
+            if (pc && pc.signalingState === 'have-local-offer') {
+              try {
+                await pc.setRemoteDescription(new RTCSessionDescription({
+                  type: 'answer',
+                  sdp: data.sdp
+                }));
+                setStatus('🔴 TRANSMITIENDO (Captura de Pantalla)');
+                setIsStreaming(true);
+
+                const unsubIce = onSnapshot(collection(db, 'live_streams', 'viewers', viewerId, 'ice_viewer'), (iceSnap) => {
+                  iceSnap.docChanges().forEach((iceChange) => {
+                    if (iceChange.type === 'added' && pc.signalingState !== 'closed') {
+                      pc.addIceCandidate(new RTCIceCandidate(iceChange.doc.data().candidate)).catch(console.error);
+                    }
+                  });
+                });
+                activeViewers.current.set(viewerId, unsubIce);
+              } catch (err) {
+                console.error('Error al establecer respuesta:', err);
+              }
+            }
+          }
+
+          if (change.type === 'removed') {
+            const unsub = activeViewers.current.get(viewerId);
+            if (unsub) unsub();
+            activeViewers.current.delete(viewerId);
+          }
+        });
       });
 
+      // 3. Cuando el Admin genera un candidato ICE, enviarlo a TODOS los espectadores activos
+      pc.onicecandidate = async (event) => {
+        if (event.candidate) {
+          const candidateData = { candidate: event.candidate.toJSON(), timestamp: serverTimestamp() };
+          const promises = Array.from(activeViewers.current.keys()).map(async (vId) => {
+            await addDoc(collection(db, 'live_streams', 'viewers', vId, 'ice_admin'), candidateData);
+          });
+          await Promise.all(promises);
+        }
+      };
+
     } catch (error) {
-      console.error('❌ ERROR FATAL al iniciar stream:', error);
+      console.error('❌ Error al iniciar stream:', error);
       setStatus('Error: ' + (error as Error).message);
     }
   };
@@ -116,31 +129,52 @@ export const StreamingPage = () => {
 
   const stopStream = async () => {
     if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
-    if (unsubscribeAnswerRef.current) {
-      unsubscribeAnswerRef.current();
-      unsubscribeAnswerRef.current = null;
-    }
-    if (unsubscribeIceRef.current) {
-      unsubscribeIceRef.current();
-      unsubscribeIceRef.current = null;
+    
+    // Limpiar listeners de todos los espectadores
+    activeViewers.current.forEach((unsub) => unsub());
+    activeViewers.current.clear();
+    
+    if (unsubscribeViewerRef.current) {
+      unsubscribeViewerRef.current();
+      unsubscribeViewerRef.current = null;
     }
     if (pcRef.current) {
       pcRef.current.close();
       pcRef.current = null;
     }
     
+    // 1. Eliminar la oferta maestra
     await deleteDoc(doc(db, 'live_streams', 'main'));
-    await setDoc(doc(db, 'live_streams', 'settings'), { mode: 'webrtc', active: false });
+    
+    // 2. Limpiar la colección de viewers para no dejar basura en la base de datos
+    try {
+      const viewersSnap = await getDocs(collection(db, 'live_streams', 'viewers'));
+      const batch = writeBatch(db);
+      viewersSnap.docs.forEach((d) => {
+        batch.delete(d.ref);
+      });
+      await batch.commit();
+    } catch (e) {
+      console.error('Error limpiando viewers:', e);
+    }
+
+    await setDoc(doc(db, 'live_streams', 'settings'), { mode: streamMode, active: false });
     
     setIsStreaming(false);
     setStatus('Sistema listo para transmitir');
   };
 
-  useEffect(() => {
+      useEffect(() => {
+    // 1. Capturar las referencias actuales ANTES del return (esto satisface al linter)
+    const viewersToClean = activeViewers.current;
+    const viewerUnsub = unsubscribeViewerRef.current;
+    const currentPc = pcRef.current;
+
     return () => {
-      if (unsubscribeAnswerRef.current) unsubscribeAnswerRef.current();
-      if (unsubscribeIceRef.current) unsubscribeIceRef.current();
-      if (pcRef.current) pcRef.current.close();
+      // 2. Usar solo las variables locales en la limpieza
+      viewersToClean.forEach((unsub) => unsub());
+      if (viewerUnsub) viewerUnsub();
+      if (currentPc) currentPc.close();
     };
   }, []);
 
@@ -153,7 +187,6 @@ export const StreamingPage = () => {
 
       <div className="max-w-2xl">
         <div className="p-6 rounded-xl bg-dark-surface border border-dark-border">
-          
           <div className="flex gap-2 mb-6 p-1 bg-dark-bg rounded-lg">
             <button 
               onClick={() => !isStreaming && setStreamMode('webrtc')}
@@ -176,7 +209,7 @@ export const StreamingPage = () => {
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-6">
                 <p className="text-sm text-blue-400 flex items-start gap-2">
                   <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                  <span>Transmite directamente desde este navegador. ⚠️ Marque <strong>"Compartir audio de la pestaña"</strong>.</span>
+                  <span>Transmite directamente desde este navegador. ⚠️ Marque <strong>"Compartir audio de la pestaña"</strong> y seleccione la pantalla completa.</span>
                 </p>
               </div>
               <div className="flex items-center gap-3 mb-6 p-4 rounded-lg bg-dark-bg border border-dark-border">
