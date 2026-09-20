@@ -8,6 +8,8 @@ export const StreamingPage = () => {
   const [streamMode, setStreamMode] = useState<'webrtc' | 'hls'>('webrtc');
   const [isStreaming, setIsStreaming] = useState(false);
   const [status, setStatus] = useState('Sistema listo para transmitir');
+  const [broadcastName, setBroadcastName] = useState('');
+  const [broadcastDescription, setBroadcastDescription] = useState('');
   
   const streamRef = useRef<MediaStream | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -25,7 +27,12 @@ export const StreamingPage = () => {
   const startWebRTC = async () => {
     try {
       // 2 segmentos (Documento válido)
-      await setDoc(doc(db, 'live_streams', 'settings'), { mode: 'webrtc', active: true });
+            await setDoc(doc(db, 'live_streams', 'settings'), { 
+        mode: 'webrtc', 
+        active: true, 
+        name: broadcastName, 
+        description: broadcastDescription 
+      });
       setStatus('Solicitando permiso de captura...');
       
       const stream = await navigator.mediaDevices.getDisplayMedia({ 
@@ -110,7 +117,13 @@ export const StreamingPage = () => {
 
   const activateHLS = async () => {
     try {
-      await setDoc(doc(db, 'live_streams', 'settings'), { mode: 'hls', active: true, src: 'https://stream.lapoderosa.co/live/lapoderosa.m3u8' });
+          await setDoc(doc(db, 'live_streams', 'settings'), { 
+        mode: 'hls', 
+        active: true,
+        src: 'https://stream.lapoderosa.co/live/lapoderosa.m3u8',
+        name: broadcastName, 
+        description: broadcastDescription 
+      });  
       setStatus('🔴 TRANSMITIENDO (Fuente Externa YoloBox/OBS)');
       setIsStreaming(true);
     } catch (error) {
@@ -192,6 +205,24 @@ export const StreamingPage = () => {
                 <div className={`w-3 h-3 rounded-full ${isStreaming ? 'bg-red-500 animate-pulse' : 'bg-gray-500'}`} />
                 <span className={`font-medium ${isStreaming ? 'text-red-400' : 'text-text-secondary'}`}>{status}</span>
               </div>
+                            {/* CAMPOS DE NOMBRE Y DESCRIPCIÓN */}
+              <div className="space-y-3 mb-4 p-4 rounded-lg bg-dark-bg border border-dark-border">
+                <input 
+                  type="text" 
+                  value={broadcastName} 
+                  onChange={(e) => setBroadcastName(e.target.value)} 
+                  placeholder="Nombre de la transmisión" 
+                  className="w-full px-3 py-2 rounded-lg bg-dark-surface border border-dark-border text-white text-sm placeholder:text-text-muted focus:border-brand focus:outline-none" 
+                />
+                <textarea 
+                  value={broadcastDescription} 
+                  onChange={(e) => setBroadcastDescription(e.target.value)} 
+                  placeholder="Descripción de la transmisión" 
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-lg bg-dark-surface border border-dark-border text-white text-sm placeholder:text-text-muted focus:border-brand focus:outline-none resize-none" 
+                />
+              </div>
+
               <div className="flex gap-3">
                 {!isStreaming ? (
                   <button onClick={startWebRTC} className="flex-1 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold transition-colors flex items-center justify-center gap-2">
@@ -212,6 +243,24 @@ export const StreamingPage = () => {
                   <span>URL: rtmp://104.156.247.202/live <br/> Clave: lapoderosa</span>
                 </p>
               </div>
+                            {/* CAMPOS DE NOMBRE Y DESCRIPCIÓN PARA YOLOBOX/OBS */}
+              <div className="space-y-3 mb-4 p-4 rounded-lg bg-dark-bg border border-dark-border">
+                <input 
+                  type="text" 
+                  value={broadcastName} 
+                  onChange={(e) => setBroadcastName(e.target.value)} 
+                  placeholder="Nombre de la transmisión" 
+                  className="w-full px-3 py-2 rounded-lg bg-dark-surface border border-dark-border text-white text-sm placeholder:text-text-muted focus:border-brand focus:outline-none" 
+                />
+                <textarea 
+                  value={broadcastDescription} 
+                  onChange={(e) => setBroadcastDescription(e.target.value)} 
+                  placeholder="Descripción de la transmisión" 
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-lg bg-dark-surface border border-dark-border text-white text-sm placeholder:text-text-muted focus:border-brand focus:outline-none resize-none" 
+                />
+              </div>
+
               <div className="flex items-center gap-3 mb-6 p-4 rounded-lg bg-dark-bg border border-dark-border">
                 <div className={`w-3 h-3 rounded-full ${isStreaming ? 'bg-red-500 animate-pulse' : 'bg-gray-500'}`} />
                 <span className={`font-medium ${isStreaming ? 'text-red-400' : 'text-text-secondary'}`}>{status}</span>

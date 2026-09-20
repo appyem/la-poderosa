@@ -19,6 +19,7 @@ export const TVPage = () => {
   
   const [streamMode, setStreamMode] = useState<'webrtc' | 'hls' | 'offline'>('offline');
   const [hlsSrc, setHlsSrc] = useState('');
+  const [broadcastInfo, setBroadcastInfo] = useState({ name: '', description: '' });
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -52,15 +53,21 @@ export const TVPage = () => {
     return () => clearInterval(chatInterval);
   }, []);
 
-  useEffect(() => {
-    // 2 segmentos (Documento válido)
+    useEffect(() => {
     unsubscribeSettingsRef.current = onSnapshot(doc(db, 'live_streams', 'settings'), (snapshot) => {
       const data = snapshot.data();
       if (data && data.active) {
         setStreamMode(data.mode);
-        if (data.mode === 'hls' && data.src) setHlsSrc(data.src);
+        setBroadcastInfo({ 
+          name: data.name || 'Transmisión en Vivo', 
+          description: data.description || '' 
+        });
+        if (data.mode === 'hls' && data.src) {
+          setHlsSrc(data.src);
+        }
       } else {
         setStreamMode('offline');
+        setBroadcastInfo({ name: '', description: '' });
         cleanupWebRTC();
       }
     });
@@ -152,6 +159,17 @@ export const TVPage = () => {
     }
   }, [chatMessages]);
 
+    const handleShare = async () => {
+    const url = window.location.href;
+    const text = `Mira esta transmisión: ${broadcastInfo.name} - ${broadcastInfo.description}`;
+    try {
+      await navigator.clipboard.writeText(`${text}\n${url}`);
+      alert('Enlace copiado al portapapeles');
+    } catch (err) {
+      console.error('Error al copiar: ', err);
+    }
+  };
+
   const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
@@ -207,12 +225,12 @@ export const TVPage = () => {
           <div className="p-6 rounded-xl bg-dark-surface border border-dark-border space-y-4">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
-                <h1 className="text-2xl font-bold text-white">Transmisión en Vivo</h1>
-                <p className="text-text-secondary">LA PODEROSA Televisión</p>
+                                <h1 className="text-2xl font-bold text-white">{broadcastInfo.name || 'Transmisión en Vivo'}</h1>
+                <p className="text-text-secondary">{broadcastInfo.description || 'LA PODEROSA Televisión'}</p>
               </div>
               <div className="flex gap-2">
                 <button className="p-2 rounded-full bg-dark-elevated hover:bg-dark-surface transition-colors text-white"><Heart className="w-5 h-5" /></button>
-                <button className="p-2 rounded-full bg-dark-elevated hover:bg-dark-surface transition-colors text-white"><Share2 className="w-5 h-5" /></button>
+                <button onClick={handleShare} className="p-2 rounded-full bg-dark-elevated hover:bg-dark-surface transition-colors text-white"><Share2 className="w-5 h-5" /></button>
               </div>
             </div>
             <div className="flex flex-wrap gap-4 text-sm text-text-secondary">
