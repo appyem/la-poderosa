@@ -23,7 +23,7 @@ export const ProductosPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState({
     titulo: '',
     descripcionCorta: '',
     descripcion: '',
@@ -36,7 +36,8 @@ export const ProductosPage = () => {
     enOferta: false,
     activo: true,
     fechaOfertaFin: '',
-    pesoKg: 0
+    pesoKg: 0,
+    whatsapp: ''
   });
 
   const [imagenes, setImagenes] = useState<string[]>([]); // URLs de imágenes ya subidas
@@ -71,7 +72,7 @@ export const ProductosPage = () => {
     return () => { isMounted = false; };
   }, []);
 
-  const resetForm = () => {
+    const resetForm = () => {
     setFormData({
       titulo: '',
       descripcionCorta: '',
@@ -85,7 +86,8 @@ export const ProductosPage = () => {
       enOferta: false,
       activo: true,
       fechaOfertaFin: '',
-      pesoKg: 0
+      pesoKg: 0,
+      whatsapp: ''
     });
     setImagenes([]);
     setImagenesPreview([]);
@@ -101,7 +103,7 @@ export const ProductosPage = () => {
     setShowForm(true);
   };
 
-  const handleOpenEdit = (producto: Producto) => {
+    const handleOpenEdit = (producto: Producto) => {
     setFormData({
       titulo: producto.titulo,
       descripcionCorta: producto.descripcionCorta,
@@ -117,7 +119,8 @@ export const ProductosPage = () => {
       fechaOfertaFin: producto.fechaOfertaFin 
   ? new Date(producto.fechaOfertaFin.toMillis()).toISOString().slice(0, 16)
   : '',
-      pesoKg: producto.pesoKg || 0
+      pesoKg: producto.pesoKg || 0,
+      whatsapp: producto.whatsapp || ''
     });
     setImagenes(producto.imagenes || []);
     setImagenesPreview(producto.imagenes || []);
@@ -196,7 +199,7 @@ export const ProductosPage = () => {
         ? Timestamp.fromDate(new Date(formData.fechaOfertaFin))
         : undefined;
 
-      const dataToSave = {
+            const dataToSave = {
   titulo: formData.titulo.trim(),
   descripcionCorta: formData.descripcionCorta.trim().slice(0, 150),
   descripcion: formData.descripcion.trim(),
@@ -211,7 +214,8 @@ export const ProductosPage = () => {
   ...(formData.enOferta && formData.precioAnterior > 0 && { precioAnterior: formData.precioAnterior }),
   ...(formData.sku.trim() && { sku: formData.sku.trim() }),
   ...(formData.pesoKg > 0 && { pesoKg: formData.pesoKg }),
-  ...(fechaOfertaFin && { fechaOfertaFin })
+  ...(fechaOfertaFin && { fechaOfertaFin }),
+  ...(formData.whatsapp.trim() && { whatsapp: formData.whatsapp.trim() })
 };
 
       if (editingId) {
@@ -447,7 +451,7 @@ export const ProductosPage = () => {
               </select>
             </div>
 
-            {/* Peso */}
+                        {/* Peso */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-text-secondary">Peso (kg)</label>
               <input 
@@ -458,6 +462,18 @@ export const ProductosPage = () => {
                 onChange={e => setFormData({...formData, pesoKg: parseFloat(e.target.value) || 0})} 
                 className="w-full px-4 py-2.5 rounded-lg bg-dark-bg border border-dark-border text-white focus:border-brand focus:outline-none"
                 placeholder="0.5"
+              />
+            </div>
+
+            {/* WhatsApp */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-text-secondary">WhatsApp (número de contacto)</label>
+              <input 
+                type="tel" 
+                value={formData.whatsapp} 
+                onChange={e => setFormData({...formData, whatsapp: e.target.value})} 
+                className="w-full px-4 py-2.5 rounded-lg bg-dark-bg border border-dark-border text-white focus:border-brand focus:outline-none"
+                placeholder="573001234567 (con código de país, sin +)"
               />
             </div>
           </div>

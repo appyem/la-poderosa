@@ -598,6 +598,7 @@ export interface Producto {
   activo: boolean; // Disponible para comprar
   fechaOfertaFin?: Timestamp; // Si tiene oferta, cuándo termina
   pesoKg?: number; // Para calcular envíos futuros
+  whatsapp?: string; // Número de WhatsApp para contacto directo (con código de país, sin +)
   tenantId: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
