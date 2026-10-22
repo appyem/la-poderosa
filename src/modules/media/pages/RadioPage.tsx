@@ -16,7 +16,7 @@ import {
 } from '../../../core/firebase/services';
 import { Timestamp } from 'firebase/firestore';
 
-const STREAM_URL = "http://sapircast.caster.fm:10406/q4QD0"; 
+const STREAM_URL = "https://lapoderosadelcafe.ismyradio.com/stream";
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=1920';
 
@@ -185,7 +185,7 @@ export const RadioPage = () => {
 
   return (
     <div className="space-y-6 py-6">
-      <audio ref={audioRef} src={STREAM_URL} preload="none" crossOrigin="anonymous" />
+      <audio ref={audioRef} src={STREAM_URL} preload="none" />
 
       {/* Reproductor Principal */}
       <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-brand-dark via-dark-surface to-dark-bg border border-dark-border">

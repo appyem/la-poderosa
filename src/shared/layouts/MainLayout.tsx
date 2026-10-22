@@ -127,7 +127,7 @@ export const MainLayout = () => {
 
   return (
     <div className="min-h-screen bg-dark-bg text-text-primary flex flex-col relative">
-      <audio ref={audioRef} src={STREAM_URL} preload="none" crossOrigin="anonymous" />
+      <audio ref={audioRef} src={STREAM_URL} preload="none" />
 
       <div className="fixed inset-0 z-0 block">
         <video autoPlay muted loop playsInline className="w-full h-full object-cover bg-dark-bg">
