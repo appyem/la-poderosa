@@ -1,10 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { 
-  Play, Pause, Volume2, VolumeX, Heart, Share2, 
-  SkipForward, SkipBack, Users, Mic2, Clock,
+  Heart, Share2, Users, Mic2, Clock,
   Headphones, MessageCircle, Send, AlertCircle
 } from 'lucide-react';
-import { AudioVisualizer } from '../components/AudioVisualizer';
 import { 
   getProgramasRadio, 
   getDJs, 
@@ -16,16 +14,11 @@ import {
 } from '../../../core/firebase/services';
 import { Timestamp } from 'firebase/firestore';
 
-const STREAM_URL = "https://lapoderosadelcafe.ismyradio.com/stream";
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=1920';
 
 export const RadioPage = () => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(75);
-  const [isMuted, setIsMuted] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
-  
   const [listeners, setListeners] = useState<number>(() => Math.floor(Math.random() * 2000) + 500);
   const [programas, setProgramas] = useState<ProgramaRadio[]>([]);
   const [djs, setDjs] = useState<DJ[]>([]);
@@ -36,7 +29,6 @@ export const RadioPage = () => {
   const [nameConfirmed, setNameConfirmed] = useState(false);
   const [loading, setLoading] = useState(true);
   
-  const audioRef = useRef<HTMLAudioElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   
   const ahora = new Date();
@@ -75,7 +67,6 @@ export const RadioPage = () => {
 
     loadData();
 
-    // Actualizar chat cada 5 segundos en segundo plano (sin forzar scroll)
     const interval = setInterval(async () => {
       try {
         const messages = await getChatMessages(50);
@@ -88,7 +79,6 @@ export const RadioPage = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // ✅ Scroll automático de oyentes (sin errores de pureza)
   useEffect(() => {
     const listenersInterval = setInterval(() => {
       setListeners(prev => {
@@ -100,42 +90,21 @@ export const RadioPage = () => {
     return () => clearInterval(listenersInterval);
   }, []);
 
-  // ✅ Scroll al final del chat SOLO al cargar la página por primera vez (si hay mensajes)
   useEffect(() => {
     if (chatMessages.length > 0) {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [chatMessages.length]);
 
-  useEffect(() => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.play().catch(e => console.log("Error al reproducir:", e));
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  }, [isPlaying]);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume / 100;
-    }
-  }, [volume, isMuted]);
-
-  const togglePlay = () => setIsPlaying(!isPlaying);
-
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
 
-    // Si el usuario no escribió nombre, usamos "Anónimo" por defecto
     const finalUserName = userName.trim() || 'Anónimo';
     if (!userName.trim()) {
       setUserName(finalUserName);
     }
     
-    // ✅ Marcamos como confirmado para que el input de nombre desaparezca después de enviar
     setNameConfirmed(true);
 
     try {
@@ -178,16 +147,13 @@ export const RadioPage = () => {
   const currentProgram = programaEnVivo;
   const nextProgram = proximoPrograma;
 
-  // ✅ CAMBIO 1: Prioridad de imagen para el Reproductor Principal
   const currentProgramImage = (currentProgram?.imagenUrl && currentProgram.imagenUrl.trim() !== '') 
     ? currentProgram.imagenUrl 
     : (currentProgram?.djId ? djs.find(d => d.id === currentProgram.djId)?.fotoUrl : '') || DEFAULT_IMAGE;
 
   return (
     <div className="space-y-6 py-6">
-      <audio ref={audioRef} src={STREAM_URL} preload="none" />
-
-      {/* Reproductor Principal */}
+      {/* Info del Programa en Vivo (sin reproductor, solo información) */}
       <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-brand-dark via-dark-surface to-dark-bg border border-dark-border">
         <div className="absolute inset-0">
           <img
@@ -254,52 +220,12 @@ export const RadioPage = () => {
             </div>
           </div>
 
-          <AudioVisualizer isPlaying={isPlaying} barCount={30} />
-
-          <div className="flex items-center justify-center gap-6">
-            <button className="p-3 rounded-full bg-dark-elevated hover:bg-dark-surface transition-colors">
-              <SkipBack className="w-5 h-5" />
-            </button>
-            
-            <button 
-              onClick={togglePlay}
-              className="p-5 rounded-full bg-brand hover:bg-brand-light shadow-lg shadow-brand/30 transition-all hover:scale-105"
-            >
-              {isPlaying ? (
-                <Pause className="w-7 h-7 fill-current" />
-              ) : (
-                <Play className="w-7 h-7 fill-current ml-1" />
-              )}
-            </button>
-            
-            <button className="p-3 rounded-full bg-dark-elevated hover:bg-dark-surface transition-colors">
-              <SkipForward className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="flex items-center gap-4 max-w-md mx-auto">
-            <button 
-              onClick={() => setIsMuted(!isMuted)}
-              className="p-2 rounded-full hover:bg-dark-elevated transition-colors"
-            >
-              {isMuted || volume === 0 ? (
-                <VolumeX className="w-5 h-5 text-text-secondary" />
-              ) : (
-                <Volume2 className="w-5 h-5 text-text-secondary" />
-              )}
-            </button>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={isMuted ? 0 : volume}
-              onChange={(e) => {
-                setVolume(Number(e.target.value));
-                setIsMuted(false);
-              }}
-              className="flex-1 h-2 bg-dark-elevated rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-brand"
-            />
-            <span className="text-sm text-text-secondary w-10 text-right">{isMuted ? 0 : volume}%</span>
+          {/* ✅ Mensaje indicando usar el widget flotante */}
+          <div className="bg-brand/10 border border-brand/30 rounded-xl p-4 flex items-center gap-3">
+            <Headphones className="w-5 h-5 text-brand flex-shrink-0" />
+            <p className="text-sm text-white/90">
+              <strong>Escucha la emisora</strong> desde el reproductor flotante en la esquina inferior derecha de tu pantalla.
+            </p>
           </div>
         </div>
       </div>
@@ -313,7 +239,6 @@ export const RadioPage = () => {
           </h3>
           {nextProgram ? (
             <div className="flex items-center gap-4">
-              {/* ✅ CAMBIO 2: Prioridad de imagen para el Próximo Programa */}
               <img 
                 src={(nextProgram.imagenUrl && nextProgram.imagenUrl.trim() !== '') ? nextProgram.imagenUrl : (djs.find(d => d.id === nextProgram.djId)?.fotoUrl || DEFAULT_IMAGE)} 
                 alt={nextProgram.nombre} 
@@ -438,7 +363,6 @@ export const RadioPage = () => {
             {programasDeHoy.map((program) => {
               const isLive = program.horaInicio <= horaActual && horaActual <= program.horaFin;
               
-              // ✅ CAMBIO 3: Prioridad de imagen para la Lista de Programación
               const listImage = (program.imagenUrl && program.imagenUrl.trim() !== '') 
                 ? program.imagenUrl 
                 : (djs.find(d => d.id === program.djId)?.fotoUrl || DEFAULT_IMAGE);
@@ -457,7 +381,6 @@ export const RadioPage = () => {
                     <p className="text-xs text-text-muted">{program.horaFin}</p>
                   </div>
                   
-                  {/* Aquí se muestra la imagen del programa (o la del DJ si no hay) */}
                   <img 
                     src={listImage} 
                     alt={program.nombre} 

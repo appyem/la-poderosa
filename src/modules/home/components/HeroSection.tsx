@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Play, Calendar, Headphones } from 'lucide-react';
+import { Calendar, Headphones } from 'lucide-react';
 import { getProgramasRadio, getDJs, type ProgramaRadio, type DJ } from '../../../core/firebase/services';
 
 interface LiveProgramData {
@@ -43,7 +43,6 @@ export const HeroSection = () => {
         if (programaEnVivo) {
           const dj = djs.find((d: DJ) => d.id === programaEnVivo.djId);
           
-          // ✅ PRIORIDAD: 1. Imagen del Programa, 2. Foto del DJ, 3. Imagen por defecto
           const imagenSegura = (programaEnVivo.imagenUrl && programaEnVivo.imagenUrl.trim() !== '') 
             ? programaEnVivo.imagenUrl 
             : (dj?.fotoUrl && dj.fotoUrl.trim() !== '') 
@@ -110,10 +109,6 @@ export const HeroSection = () => {
     };
   }, []);
 
-  const handleEscucharAhora = () => {
-    window.dispatchEvent(new CustomEvent('radio-control', { detail: { action: 'play' } }));
-  };
-
   if (loading) {
     return (
       <section className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-brand-dark via-dark-surface to-dark-bg border border-dark-border min-h-[400px] flex items-center justify-center">
@@ -135,9 +130,9 @@ export const HeroSection = () => {
             <p className="text-base md:text-lg text-text-secondary max-w-xl">Tu plataforma de medios digitales. Escucha en vivo, noticias y eventos.</p>
           </div>
           <div className="flex flex-wrap gap-3 pt-2">
-            <button onClick={handleEscucharAhora} className="flex items-center gap-2 px-6 py-3 rounded-lg bg-brand hover:bg-brand-light text-white font-semibold shadow-lg shadow-brand/30 transition-all hover:scale-105">
-              <Play className="w-5 h-5 fill-current" /> Escuchar Ahora
-            </button>
+            <a href="/radio" className="flex items-center gap-2 px-6 py-3 rounded-lg bg-dark-elevated/80 backdrop-blur-sm border border-dark-border hover:bg-dark-surface text-white font-semibold transition-all">
+              <Calendar className="w-5 h-5" /> Ver Programación
+            </a>
           </div>
         </div>
       </section>
@@ -177,10 +172,17 @@ export const HeroSection = () => {
           </div>
         </div>
 
+        {/* ✅ Mensaje indicando usar el widget flotante */}
+        {!liveProgram.nombre.startsWith('Próximamente') && (
+          <div className="bg-brand/10 border border-brand/30 rounded-xl p-4 flex items-center gap-3">
+            <Headphones className="w-5 h-5 text-brand flex-shrink-0" />
+            <p className="text-sm text-white/90">
+              <strong>Escucha la emisora</strong> desde el reproductor flotante en la esquina inferior derecha.
+            </p>
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-3 pt-2">
-          <button onClick={handleEscucharAhora} className="flex items-center gap-2 px-6 py-3 rounded-lg bg-brand hover:bg-brand-light text-white font-semibold shadow-lg shadow-brand/30 transition-all hover:scale-105">
-            <Play className="w-5 h-5 fill-current" /> Escuchar Ahora
-          </button>
           <a href="/radio" className="flex items-center gap-2 px-6 py-3 rounded-lg bg-dark-elevated/80 backdrop-blur-sm border border-dark-border hover:bg-dark-surface text-white font-semibold transition-all">
             <Calendar className="w-5 h-5" /> Ver Programación
           </a>

@@ -3,34 +3,30 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { 
   Home, Radio, Tv, Newspaper, Calendar, 
   Mic2, MessageCircle, Users, Megaphone, Phone, LayoutDashboard, 
-  Menu, X, Search, Bell, Play, Pause, Volume2, VolumeX, Briefcase, Handshake, ShoppingBag,
+  Menu, X, Search, Bell, Briefcase, Handshake, ShoppingBag,
   ShoppingCart, Heart
 } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { solicitarPermisoNotificaciones } from '../../core/firebase/services';
 
 import { InstallAppButton } from '../../components/InstallAppButton';
 import { AdPopup } from '../components/AdPopup';
-import { useRadioMetadata } from '../../hooks/useRadioMetadata';
 
-// ✅ CORREGIDO: Ahora usa HTTPS para evitar bloqueos del navegador
-const STREAM_URL = "https://sapircast.caster.fm:10406/q4QD0";
 const WHATSAPP_URL = "https://wa.me/573227027174?text=" + encodeURIComponent("Hola La Poderosa, quiero más información");
+
+declare global {
+  interface Window {
+    CasterFMEmbed?: {
+      renderAll?: () => void;
+    };
+  }
+}
 
 export const MainLayout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
-
   const [showAdPopup, setShowAdPopup] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(false);
-  
-  // ✅ CORREGIDO: Ahora estas variables se usan en el JSX, eliminando el error de ESLint
-  const { artist, title } = useRadioMetadata();
-  
-  const [isMuted, setIsMuted] = useState(false);
   const [cartCount, setCartCount] = useState(0);
-  
-  const audioRef = useRef<HTMLAudioElement>(null);
 
   interface CartItem {
     cantidad: number;
@@ -52,22 +48,6 @@ export const MainLayout = () => {
   }, []);
 
   useEffect(() => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.play().catch(() => console.log("Error al reproducir"));
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  }, [isPlaying]);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : 0.75;
-    }
-  }, [isMuted]);
-
-  useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
       const timer = setTimeout(() => {
         solicitarPermisoNotificaciones();
@@ -77,23 +57,18 @@ export const MainLayout = () => {
   }, []);
 
   useEffect(() => {
-    const handleRadioControl = (event: Event) => {
-      const customEvent = event as CustomEvent<{ action: 'play' | 'pause' }>;
-      if (customEvent.detail.action === 'play') {
-        setIsPlaying(true);
-      } else if (customEvent.detail.action === 'pause') {
-        setIsPlaying(false);
-      }
-    };
+    const existingScript = document.getElementById('casterfm-embed-script');
+    if (existingScript) {
+      window.CasterFMEmbed?.renderAll?.();
+      return;
+    }
 
-    window.addEventListener('radio-control', handleRadioControl);
-    return () => {
-      window.removeEventListener('radio-control', handleRadioControl);
-    };
+    const script = document.createElement('script');
+    script.id = 'casterfm-embed-script';
+    script.src = 'https://cdn.cloud.caster.fm/widgets/embed.js';
+    script.async = true;
+    document.body.appendChild(script);
   }, []);
-
-  const togglePlay = () => setIsPlaying(!isPlaying);
-  const toggleMute = () => setIsMuted(!isMuted);
 
   const getOverlay = () => (['/', '/emisora', '/television'].includes(location.pathname) 
     ? 'from-black/20 via-black/40 to-black/60' 
@@ -127,7 +102,40 @@ export const MainLayout = () => {
 
   return (
     <div className="min-h-screen bg-dark-bg text-text-primary flex flex-col relative">
-      <audio ref={audioRef} src={STREAM_URL} preload="none" />
+      {/* ✅ WIDGET DE RADIO FIJO - Responsive: ancho total en móvil, 320px en desktop */}
+      <div className="fixed bottom-20 md:bottom-20 right-2 md:right-4 left-2 md:left-auto z-[60] w-auto md:w-[320px] bg-black/90 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl overflow-hidden">
+        <div className="p-3 bg-gradient-to-r from-brand to-purple-600 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Radio className="w-5 h-5 text-white" />
+            <span className="text-sm font-bold text-white">LA PODEROSA - En Vivo</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <a 
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-8 h-8 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center transition-all"
+              aria-label="WhatsApp"
+            >
+              <MessageCircle className="w-4 h-4 text-white fill-current" />
+            </a>
+          </div>
+        </div>
+        <div className="p-2">
+          <div 
+            className="cstrEmbed" 
+            data-type="newStreamPlayer" 
+            data-publicToken="ddcadc0f-6cbe-4c96-a09d-21867777416e" 
+            data-theme="dark" 
+            data-color="6C2BDD"
+            data-channelId=""
+          >
+            <a href="https://www.caster.fm">Shoutcast Hosting</a>
+            <a href="https://www.caster.fm">Stream Hosting</a>
+            <a href="https://www.caster.fm">Radio Server Hosting</a>
+          </div>
+        </div>
+      </div>
 
       <div className="fixed inset-0 z-0 block">
         <video autoPlay muted loop playsInline className="w-full h-full object-cover bg-dark-bg">
@@ -242,54 +250,6 @@ export const MainLayout = () => {
           </main>
         </div>
 
-        {/* ✅ REPRODUCTOR FIJO INFERIOR CON METADATOS EN VIVO */}
-        <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-t border-white/10 px-4 py-3">
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="w-10 h-10 rounded-lg bg-brand/20 flex items-center justify-center flex-shrink-0">
-                <Radio className="w-5 h-5 text-brand" />
-              </div>
-              <div className="min-w-0">
-                {/* ✅ AQUÍ SE USAN LAS VARIABLES artist y title */}
-                <p className="text-sm font-semibold text-white truncate">{title}</p>
-                <p className="text-xs text-white/60 truncate">{artist}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 md:gap-4">
-              <a 
-                href={WHATSAPP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center transition-all hover:scale-105 text-white shadow-lg shadow-green-500/20"
-                aria-label="Contactar por WhatsApp"
-              >
-                <MessageCircle className="w-5 h-5 fill-current" />
-              </a>
-
-              <button 
-                onClick={togglePlay}
-                className="w-10 h-10 rounded-full bg-brand hover:bg-brand-light flex items-center justify-center transition-all hover:scale-105"
-              >
-                {isPlaying ? (
-                  <Pause className="w-5 h-5 fill-current text-white" />
-                ) : (
-                  <Play className="w-5 h-5 fill-current text-white ml-0.5" />
-                )}
-              </button>
-            </div>
-
-            <div className="hidden md:flex items-center gap-2 flex-1 justify-end">
-              <button onClick={toggleMute} className="p-1 hover:bg-white/10 rounded-full transition-colors">
-                {isMuted ? <VolumeX className="w-5 h-5 text-white/70" /> : <Volume2 className="w-5 h-5 text-white/70" />}
-              </button>
-              <div className="w-24 h-1.5 bg-white/20 rounded-full overflow-hidden">
-                <div className={`h-full bg-brand transition-all ${isMuted ? 'w-0' : 'w-3/4'}`} />
-              </div>
-            </div>
-          </div>
-        </div>
-
         <nav className="fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-white/10 md:hidden h-16">
           <div className="flex justify-around items-center h-full">
             {mainNav.map((item) => (
@@ -312,7 +272,6 @@ export const MainLayout = () => {
       </div>
 
       {showAdPopup && <AdPopup onClose={() => setShowAdPopup(false)} />}
-           
     </div>
   );
 };
