@@ -102,26 +102,24 @@ export const MainLayout = () => {
 
   return (
     <div className="min-h-screen bg-dark-bg text-text-primary flex flex-col relative">
-      {/* ✅ WIDGET DE RADIO FIJO - Responsive: ancho total en móvil, 320px en desktop */}
-      <div className="fixed bottom-20 md:bottom-20 right-2 md:right-4 left-2 md:left-auto z-[60] w-auto md:w-[320px] bg-black/90 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl overflow-hidden">
-        <div className="p-3 bg-gradient-to-r from-brand to-purple-600 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Radio className="w-5 h-5 text-white" />
-            <span className="text-sm font-bold text-white">LA PODEROSA - En Vivo</span>
+      {/* ✅ WIDGET DE RADIO FIJO - Compacto en móvil (260px), normal en desktop (320px) */}
+      <div className="fixed bottom-20 right-2 md:right-4 z-[60] w-[260px] md:w-[320px] bg-black/90 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl overflow-hidden">
+        <div className="p-2 md:p-3 bg-gradient-to-r from-brand to-purple-600 flex items-center justify-between">
+          <div className="flex items-center gap-1.5 md:gap-2 min-w-0 flex-1">
+            <Radio className="w-4 h-4 md:w-5 md:h-5 text-white flex-shrink-0" />
+            <span className="text-xs md:text-sm font-bold text-white truncate">LA PODEROSA</span>
           </div>
-          <div className="flex items-center gap-2">
-            <a 
-              href={WHATSAPP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-8 h-8 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center transition-all"
-              aria-label="WhatsApp"
-            >
-              <MessageCircle className="w-4 h-4 text-white fill-current" />
-            </a>
-          </div>
+          <a 
+            href={WHATSAPP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center transition-all flex-shrink-0 ml-2"
+            aria-label="WhatsApp"
+          >
+            <MessageCircle className="w-3.5 h-3.5 md:w-4 md:h-4 text-white fill-current" />
+          </a>
         </div>
-        <div className="p-2">
+        <div className="p-1.5 md:p-2">
           <div 
             className="cstrEmbed" 
             data-type="newStreamPlayer" 
