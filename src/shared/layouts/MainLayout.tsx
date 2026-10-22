@@ -4,7 +4,7 @@ import {
   Home, Radio, Tv, Newspaper, Calendar, 
   Mic2, MessageCircle, Users, Megaphone, Phone, LayoutDashboard, 
   Menu, X, Search, Bell, Briefcase, Handshake, ShoppingBag,
-  ShoppingCart, Heart
+  ShoppingCart, Heart, Minimize2
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { solicitarPermisoNotificaciones } from '../../core/firebase/services';
@@ -27,6 +27,8 @@ export const MainLayout = () => {
   const location = useLocation();
   const [showAdPopup, setShowAdPopup] = useState(true);
   const [cartCount, setCartCount] = useState(0);
+  // ✅ Estado SOLO para móvil: widget abierto por defecto
+  const [mobileRadioOpen, setMobileRadioOpen] = useState(true);
 
   interface CartItem {
     cantidad: number;
@@ -70,6 +72,16 @@ export const MainLayout = () => {
     document.body.appendChild(script);
   }, []);
 
+  // ✅ Re-renderizar widget de Caster.fm cuando se abre en móvil
+  useEffect(() => {
+    if (mobileRadioOpen) {
+      const timer = setTimeout(() => {
+        window.CasterFMEmbed?.renderAll?.();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [mobileRadioOpen]);
+
   const getOverlay = () => (['/', '/emisora', '/television'].includes(location.pathname) 
     ? 'from-black/20 via-black/40 to-black/60' 
     : 'from-black/60 via-black/80 to-black/90');
@@ -102,24 +114,27 @@ export const MainLayout = () => {
 
   return (
     <div className="min-h-screen bg-dark-bg text-text-primary flex flex-col relative">
-      {/* ✅ WIDGET DE RADIO FIJO - Compacto en móvil (260px), normal en desktop (320px) */}
-      <div className="fixed bottom-20 right-2 md:right-4 z-[60] w-[260px] md:w-[320px] bg-black/90 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl overflow-hidden">
-        <div className="p-2 md:p-3 bg-gradient-to-r from-brand to-purple-600 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 md:gap-2 min-w-0 flex-1">
-            <Radio className="w-4 h-4 md:w-5 md:h-5 text-white flex-shrink-0" />
-            <span className="text-xs md:text-sm font-bold text-white truncate">LA PODEROSA</span>
+      
+      {/* ============================================================ */}
+      {/* ✅ WIDGET DE RADIO - VERSIÓN DESKTOP (siempre visible) */}
+      {/* ============================================================ */}
+      <div className="hidden md:block fixed bottom-20 right-4 z-[60] w-[320px] bg-black/90 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl overflow-hidden">
+        <div className="p-3 bg-gradient-to-r from-brand to-purple-600 flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Radio className="w-5 h-5 text-white flex-shrink-0" />
+            <span className="text-sm font-bold text-white truncate">LA PODEROSA - En Vivo</span>
           </div>
           <a 
             href={WHATSAPP_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center transition-all flex-shrink-0 ml-2"
+            className="w-8 h-8 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center transition-all flex-shrink-0 ml-2"
             aria-label="WhatsApp"
           >
-            <MessageCircle className="w-3.5 h-3.5 md:w-4 md:h-4 text-white fill-current" />
+            <MessageCircle className="w-4 h-4 text-white fill-current" />
           </a>
         </div>
-        <div className="p-1.5 md:p-2">
+        <div className="p-2">
           <div 
             className="cstrEmbed" 
             data-type="newStreamPlayer" 
@@ -134,6 +149,65 @@ export const MainLayout = () => {
           </div>
         </div>
       </div>
+
+      {/* ============================================================ */}
+      {/* ✅ WIDGET DE RADIO - VERSIÓN MÓVIL (con botón minimizar) */}
+      {/* ============================================================ */}
+      
+      {/* Cuando está minimizado: solo un botón circular */}
+      {!mobileRadioOpen && (
+        <button
+          onClick={() => setMobileRadioOpen(true)}
+          className="md:hidden fixed bottom-20 right-3 z-[60] w-14 h-14 rounded-full bg-gradient-to-r from-brand to-purple-600 flex items-center justify-center shadow-2xl transition-all hover:scale-105 active:scale-95"
+          aria-label="Abrir radio"
+        >
+          <Radio className="w-6 h-6 text-white" />
+        </button>
+      )}
+
+      {/* Cuando está abierto: el widget completo */}
+      {mobileRadioOpen && (
+        <div className="md:hidden fixed bottom-20 right-3 z-[60] w-[260px] bg-black/90 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl overflow-hidden">
+          <div className="p-2 bg-gradient-to-r from-brand to-purple-600 flex items-center justify-between">
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+              <Radio className="w-4 h-4 text-white flex-shrink-0" />
+              <span className="text-xs font-bold text-white truncate">LA PODEROSA</span>
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+              <a 
+                href={WHATSAPP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-7 h-7 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center transition-all"
+                aria-label="WhatsApp"
+              >
+                <MessageCircle className="w-3.5 h-3.5 text-white fill-current" />
+              </a>
+              <button
+                onClick={() => setMobileRadioOpen(false)}
+                className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all"
+                aria-label="Minimizar radio"
+              >
+                <Minimize2 className="w-3.5 h-3.5 text-white" />
+              </button>
+            </div>
+          </div>
+          <div className="p-1.5">
+            <div 
+              className="cstrEmbed" 
+              data-type="newStreamPlayer" 
+              data-publicToken="ddcadc0f-6cbe-4c96-a09d-21867777416e" 
+              data-theme="dark" 
+              data-color="6C2BDD"
+              data-channelId=""
+            >
+              <a href="https://www.caster.fm">Shoutcast Hosting</a>
+              <a href="https://www.caster.fm">Stream Hosting</a>
+              <a href="https://www.caster.fm">Radio Server Hosting</a>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="fixed inset-0 z-0 block">
         <video autoPlay muted loop playsInline className="w-full h-full object-cover bg-dark-bg">
