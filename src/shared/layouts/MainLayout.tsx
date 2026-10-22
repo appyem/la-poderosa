@@ -27,7 +27,6 @@ export const MainLayout = () => {
   const location = useLocation();
   const [showAdPopup, setShowAdPopup] = useState(true);
   const [cartCount, setCartCount] = useState(0);
-  // ✅ Estado SOLO para móvil: widget abierto por defecto
   const [mobileRadioOpen, setMobileRadioOpen] = useState(true);
 
   interface CartItem {
@@ -58,12 +57,10 @@ export const MainLayout = () => {
     }
   }, []);
 
+  // ✅ Cargar script de Caster.fm UNA SOLA VEZ al montar el layout
   useEffect(() => {
     const existingScript = document.getElementById('casterfm-embed-script');
-    if (existingScript) {
-      window.CasterFMEmbed?.renderAll?.();
-      return;
-    }
+    if (existingScript) return;
 
     const script = document.createElement('script');
     script.id = 'casterfm-embed-script';
@@ -71,16 +68,6 @@ export const MainLayout = () => {
     script.async = true;
     document.body.appendChild(script);
   }, []);
-
-  // ✅ Re-renderizar widget de Caster.fm cuando se abre en móvil
-  useEffect(() => {
-    if (mobileRadioOpen) {
-      const timer = setTimeout(() => {
-        window.CasterFMEmbed?.renderAll?.();
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [mobileRadioOpen]);
 
   const getOverlay = () => (['/', '/emisora', '/television'].includes(location.pathname) 
     ? 'from-black/20 via-black/40 to-black/60' 
@@ -151,63 +138,71 @@ export const MainLayout = () => {
       </div>
 
       {/* ============================================================ */}
-      {/* ✅ WIDGET DE RADIO - VERSIÓN MÓVIL (con botón minimizar) */}
+      {/* ✅ WIDGET DE RADIO - VERSIÓN MÓVIL (SOLUCIÓN NUCLEAR) */}
+      {/* El widget SIEMPRE está en el DOM, solo se oculta visualmente  */}
+      {/* Así el audio NUNCA se interrumpe al minimizar                 */}
       {/* ============================================================ */}
       
-      {/* Cuando está minimizado: solo un botón circular */}
-      {!mobileRadioOpen && (
-        <button
-          onClick={() => setMobileRadioOpen(true)}
-          className="md:hidden fixed bottom-20 right-3 z-[60] w-14 h-14 rounded-full bg-gradient-to-r from-brand to-purple-600 flex items-center justify-center shadow-2xl transition-all hover:scale-105 active:scale-95"
-          aria-label="Abrir radio"
-        >
-          <Radio className="w-6 h-6 text-white" />
-        </button>
-      )}
+      {/* Botón flotante (solo visible cuando el widget está minimizado) */}
+      <button
+        onClick={() => setMobileRadioOpen(true)}
+        className={`md:hidden fixed bottom-20 right-3 z-[60] w-14 h-14 rounded-full bg-gradient-to-r from-brand to-purple-600 flex items-center justify-center shadow-2xl transition-all duration-300 ${
+          mobileRadioOpen 
+            ? 'opacity-0 pointer-events-none scale-75' 
+            : 'opacity-100 pointer-events-auto scale-100'
+        }`}
+        aria-label="Abrir radio"
+      >
+        <Radio className="w-6 h-6 text-white" />
+      </button>
 
-      {/* Cuando está abierto: el widget completo */}
-      {mobileRadioOpen && (
-        <div className="md:hidden fixed bottom-20 right-3 z-[60] w-[260px] bg-black/90 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl overflow-hidden">
-          <div className="p-2 bg-gradient-to-r from-brand to-purple-600 flex items-center justify-between">
-            <div className="flex items-center gap-1.5 min-w-0 flex-1">
-              <Radio className="w-4 h-4 text-white flex-shrink-0" />
-              <span className="text-xs font-bold text-white truncate">LA PODEROSA</span>
-            </div>
-            <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-              <a 
-                href={WHATSAPP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-7 h-7 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center transition-all"
-                aria-label="WhatsApp"
-              >
-                <MessageCircle className="w-3.5 h-3.5 text-white fill-current" />
-              </a>
-              <button
-                onClick={() => setMobileRadioOpen(false)}
-                className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all"
-                aria-label="Minimizar radio"
-              >
-                <Minimize2 className="w-3.5 h-3.5 text-white" />
-              </button>
-            </div>
+      {/* Widget completo (SIEMPRE en el DOM, solo cambia su visibilidad) */}
+      <div 
+        className={`md:hidden fixed bottom-20 right-3 z-[60] w-[260px] bg-black/90 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl overflow-hidden transition-all duration-300 ease-out ${
+          mobileRadioOpen 
+            ? 'opacity-100 pointer-events-auto translate-y-0' 
+            : 'opacity-0 pointer-events-none translate-y-4'
+        }`}
+      >
+        <div className="p-2 bg-gradient-to-r from-brand to-purple-600 flex items-center justify-between">
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            <Radio className="w-4 h-4 text-white flex-shrink-0" />
+            <span className="text-xs font-bold text-white truncate">LA PODEROSA</span>
           </div>
-          <div className="p-1.5">
-            <div 
-              className="cstrEmbed" 
-              data-type="newStreamPlayer" 
-              data-publicToken="ddcadc0f-6cbe-4c96-a09d-21867777416e" 
-              data-theme="dark" 
-              data-color="6C2BDD"
-              data-channelId=""
+          <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+            <a 
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-7 h-7 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center transition-all"
+              aria-label="WhatsApp"
             >
-              <a href="https://www.caster.fm">Shoutcast Hosting</a>
-              <a href="https://www.caster.fm">Stream Hosting</a>
-              <a href="https://www.caster.fm">Radio Server Hosting</a>
-            </div>
+              <MessageCircle className="w-3.5 h-3.5 text-white fill-current" />
+            </a>
+            <button
+              onClick={() => setMobileRadioOpen(false)}
+              className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all"
+              aria-label="Minimizar radio"
+            >
+              <Minimize2 className="w-3.5 h-3.5 text-white" />
+            </button>
           </div>
         </div>
-      )}
+        <div className="p-1.5">
+          <div 
+            className="cstrEmbed" 
+            data-type="newStreamPlayer" 
+            data-publicToken="ddcadc0f-6cbe-4c96-a09d-21867777416e" 
+            data-theme="dark" 
+            data-color="6C2BDD"
+            data-channelId=""
+          >
+            <a href="https://www.caster.fm">Shoutcast Hosting</a>
+            <a href="https://www.caster.fm">Stream Hosting</a>
+            <a href="https://www.caster.fm">Radio Server Hosting</a>
+          </div>
+        </div>
+      </div>
 
       <div className="fixed inset-0 z-0 block">
         <video autoPlay muted loop playsInline className="w-full h-full object-cover bg-dark-bg">
